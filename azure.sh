@@ -8,7 +8,7 @@ set -e  # para se houver erro
 
 # ─── CONFIGURAÇÕES (edita aqui) ──────────────────────────────────────────────
 RESOURCE_GROUP="rg-cryptotracker"
-LOCATION="westeurope"
+LOCATION="francecentral"
 APP_SERVICE_PLAN="plan-cryptotracker"
 APP_NAME="cryptotracker-app"          # ⚠️ tem de ser único globalmente no Azure
 GITHUB_REPO="https://github.com/JChorao/CryptoTracker"
