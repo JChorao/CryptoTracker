@@ -71,16 +71,41 @@ echo "✅ SCM Basic Auth ativado."
 
 # ─── 6. LIGAR AO GITHUB (CI/CD) ──────────────────────────────────────────────
 echo ""
-echo "📌 Passo 6: Configurar integração com repositório GitHub..."
+echo "📌 Passo 6: Configurar integração manual (esperar pelo GitHub Actions)..."
 az webapp deployment source config \
   --name "$APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --repo-url "$GITHUB_REPO" \
   --branch "$GITHUB_BRANCH" \
-  --repository-type github
+  --manual-integration
 
-echo "✅ Repositório ligado."
+echo "✅ Integração manual configurada."
 
 # ─── 7. OBTER PUBLISH PROFILE E CONFIGURAR GITHUB SECRETS ────────────────────
 echo ""
 echo "📌 Passo 7: A extrair Publish Profile e a configurar Secrets no GitHub..."
+az webapp deployment list-publishing-profiles \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --xml > publish-profile.xml
+
+# Usar a GitHub CLI para guardar os secrets no repositório remoto
+gh secret set AZURE_PUBLISH_PROFILE < publish-profile.xml --repo "JChorao/CryptoTracker"
+gh secret set AZURE_APP_NAME --body "$APP_NAME" --repo "JChorao/CryptoTracker"
+
+# Limpar o ficheiro sensível localmente
+rm publish-profile.xml
+echo "✅ Secrets (AZURE_APP_NAME e AZURE_PUBLISH_PROFILE) criados com sucesso no GitHub!"
+
+# ─── 8. RESUMO E LINK DA APP ─────────────────────────────────────────────────
+echo ""
+echo "============================================="
+APP_URL=$(az webapp show \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "defaultHostName" -o tsv)
+echo "🌐 A tua App Service B1 está online em: https://$APP_URL"
+echo "============================================="
+echo ""
+echo "🎉 Setup concluído com sucesso!"
+echo "👉 Faz 'git commit' e 'git push' para a branch 'main' para disparar o Deploy pelo GitHub Actions."
