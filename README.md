@@ -37,7 +37,7 @@ cryptotracker/
 
 Antes de começar, garante que tens instalado:
 
-- [Node.js 18+](https://nodejs.org/)
+- [Node.js 20+](https://nodejs.org/)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 - [Git](https://git-scm.com/)
 - Uma conta [Microsoft Azure](https://portal.azure.com) ativa
