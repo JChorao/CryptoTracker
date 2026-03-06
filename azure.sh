@@ -13,7 +13,7 @@ APP_SERVICE_PLAN="plan-cryptotracker"
 APP_NAME="cryptotracker-app"          # ⚠️ tem de ser único globalmente no Azure
 GITHUB_REPO="https://github.com/JChorao/CryptoTracker"
 GITHUB_BRANCH="main"
-NODE_VERSION="NODE|18-lts"
+NODE_VERSION="NODE|20-lts"
 
 echo "============================================="
 echo "  🚀 CryptoTracker — Azure App Service Setup"
