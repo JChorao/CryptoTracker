@@ -10,12 +10,16 @@
 
 ```
 cryptotracker/
-├── app.js                        # Servidor Node.js (Express + API CoinGecko)
+├── app.js                        # Servidor Node.js
+├── azure.sh                      # Cria a IAS no Azure
 ├── package.json                  # Dependências do projeto
+├── package-lock.json
 ├── .gitignore                    # Ficheiros ignorados pelo Git
-└── .github/
-    └── workflows/
-        └── deploy.yml            # GitHub Actions — CI/CD automático para Azure
+├── .github/
+│   └── workflows/
+│       └── deploy.yml            # GitHub Actions — CI/CD automático para Azure
+└── views/
+    └── index.ejs                 # Index da APP
 ```
 
 ---
@@ -24,7 +28,7 @@ cryptotracker/
 
 | Serviço | Função | Estado |
 |---|---|---|
-| **Azure App Service** | Servidor web Node.js com deploy via GitHub | ✅ Fase 1 |
+| **Azure App Service** | Servidor web Node.js com deploy via GitHub | ✅ Concluído |
 | **Azure Function** | Recolha periódica de dados (CoinGecko API) | 🔜 Fase 2 |
 | **Azure Cosmos DB** | Base de dados NoSQL para histórico de preços | 🔜 Fase 2 |
 | **Azure Blob Storage** | Armazenamento de relatórios gerados | 🔜 Fase 3 |
@@ -54,23 +58,16 @@ git init
 git add .
 git commit -m "first commit"
 git branch -M main
-git remote add origin https://github.com/SEU_UTILIZADOR/SEU_REPOSITORIO.git
+git remote add origin https://github.com/JChorao/CryptoTracker.git
 git push -u origin main
 ```
 
 ---
 
-### 2. Instalar dependências localmente
+### 2. Instalar dependências
 
 ```bash
 npm install
-```
-
-Testar localmente:
-
-```bash
-npm start
-# App disponível em http://localhost:3000
 ```
 
 ---
@@ -82,7 +79,7 @@ npm start
 ```bash
 RESOURCE_GROUP="rg-cryptotracker"      # nome do grupo de recursos
 APP_NAME="cryptotracker-app"           # ⚠️ tem de ser único globalmente no Azure
-GITHUB_REPO="https://github.com/SEU_UTILIZADOR/SEU_REPOSITORIO"
+GITHUB_REPO="https://github.com/JChorao/CryptoTracker"
 ```
 
 Depois executa:
@@ -138,38 +135,22 @@ GitHub → Actions → Deploy CryptoTracker → Azure App Service
 
 ---
 
-## 🌐 Endpoints Disponíveis
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| `GET` | `/` | Página inicial |
-| `GET` | `/api/health` | Estado do servidor |
-| `GET` | `/api/crypto` | Top 10 criptomoedas em EUR |
-| `GET` | `/api/crypto/:coin` | Preço de uma moeda específica |
-
-**Exemplos:**
-```
-https://cryptotracker-app.azurewebsites.net/api/health
-https://cryptotracker-app.azurewebsites.net/api/crypto
-https://cryptotracker-app.azurewebsites.net/api/crypto/bitcoin
-https://cryptotracker-app.azurewebsites.net/api/crypto/ethereum
-```
-
----
-
 ## 📊 Planeamento (Diagrama de Gantt)
 
-| Semanas | Tarefa |
-|---|---|
-| 1 | Brainstorming, definição da arquitetura e Relatório 1ª Fase ✅ |
-| 2–3 | Azure App Service + GitHub CI/CD ✅ |
-| 3–5 | Azure Function + CoinGecko API |
-| 4–6 | Azure Cosmos DB |
-| 5–7 | Azure Blob Storage |
-| 6–8 | Docker Container (ACI) + Relatório 2ª Fase |
-| 9–11 | Terraform (IaC) |
-| 10–12 | Testes & Correção de bugs |
-| 13 | Relatório Final & Entrega |
+| Tarefa | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | S13 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Brainstorming / Relatório 1ª Fase | ✅ | | | | | | | | | | | | |
+| Implementação App Service + GitHub | | ✅ | ✅ | | | | | | | | | | |
+| Implementação Azure Function | | | ✅ | ✅ | ✅ | | | | | | | | |
+| Implementação Cosmos DB | | | | ✅ | ✅ | ✅ | | | | | | | |
+| Implementação Blob Storage | | | | | ✅ | ✅ | ✅ | | | | | | |
+| Implementação Docker | | | | | | ✅ | ✅ | ✅ | | | | | |
+| Relatório 2ª Fase | | | | | | | ✅ | ✅ | | | | | |
+| Implementação Terraform | | | | | | | | | ✅ | ✅ | ✅ | | |
+| Testes & Correção de Bugs | | | | | | | | | | ✅ | ✅ | ✅ | |
+| Relatório Final | | | | | | | | | | | | | ✅ |
+
+> Semanas entre **23 de fevereiro** e **22 de maio de 2026**
 
 ---
 
