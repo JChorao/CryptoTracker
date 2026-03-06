@@ -143,7 +143,7 @@ GitHub → Actions → Deploy CryptoTracker → Azure App Service
 | Brainstorming / Relatório 1ª Fase | ✅ | | | | | | | | | | | | |
 | Implementação App Service + GitHub | | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | Implementação Azure Function | | ✅ | ✅ | ✅ | | | | | | | | | |
-| Implementação Cosmos DB | | | | ✅ | ✅ | ✅ | | | | | | | |
+| Implementação Cosmos DB | | ✅ | ✅ | ✅ |  |  | | | | | | | |
 | Implementação Blob Storage | | | | | ✅ | ✅ | ✅ | ✅ | | | | | |
 | Implementação Docker | | | | | ✅ | ✅ | ✅ | ✅ | | | | | |
 | Relatório 2ª Fase | | | | | | |  | ✅ | | | | | |
