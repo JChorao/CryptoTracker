@@ -41,7 +41,7 @@ cryptotracker/
 
 Antes de começar, garante que tens instalado:
 
-- [Node.js 20+](https://nodejs.org/)
+- [Node.js 22+](https://nodejs.org/)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 - [Git](https://git-scm.com/)
 - Uma conta [Microsoft Azure](https://portal.azure.com) ativa
@@ -74,45 +74,46 @@ npm install
 
 ### 3. Executar o script de setup Azure
 
-> ⚠️ **Antes de executar**, abre o ficheiro `setup-azure.sh` e edita as variáveis no topo:
+> ⚠️ **Antes de executar**, abre o ficheiro `azure.sh` e edita as variáveis no topo:
 
 ```bash
 RESOURCE_GROUP="rg-cryptotracker"      # nome do grupo de recursos
-APP_NAME="cryptotracker-app"           # ⚠️ tem de ser único globalmente no Azure
+APP_NAME="cryptotracker-app-$RANDOM"   # Numero torna aleatorio
 GITHUB_REPO="https://github.com/JChorao/CryptoTracker"
 ```
 
 Depois executa:
 
 ```bash
-bash setup-azure.sh
+bash azure.sh
 ```
 
 O script faz automaticamente:
 1. Login no Azure (`az login`)
 2. Cria o **Resource Group**
 3. Cria o **App Service Plan** (Free tier, Linux)
-4. Cria a **Web App** com Node.js 18
+4. Cria a **Web App** com Node.js 22
 5. Configura variáveis de ambiente (`NODE_ENV`, `PORT`)
 6. Liga ao repositório GitHub
 7. Gera o ficheiro `publish-profile.xml`
 
 ---
 
-### 4. Configurar Secrets no GitHub
+### 4. Verificar Secrets no GitHub
 
-Após o script terminar, vai ao teu repositório no GitHub:
+Como o script utiliza a GitHub CLI, os secrets são configurados automaticamente! Não precisas de os adicionar à mão nem de lidar com ficheiros XML.
+
+Se quiseres confirmar que tudo correu bem, vai ao teu repositório no GitHub:
 
 ```
-GitHub → Settings → Secrets and variables → Actions → New repository secret
+GitHub → Settings → Secrets and variables → Actions
 ```
 
-Adiciona os seguintes secrets:
+Deves ver lá criados os seguintes Repository secrets:
 
-| Nome do Secret | Valor |
-|---|---|
-| `AZURE_APP_NAME` | Nome da tua app (ex: `cryptotracker-app`) |
-| `AZURE_PUBLISH_PROFILE` | Conteúdo completo do ficheiro `publish-profile.xml` |
+AZURE_APP_NAME
+
+AZURE_PUBLISH_PROFILE
 
 > 💡 Abre o `publish-profile.xml` com um editor de texto, seleciona tudo (Ctrl+A) e cola no campo do secret.
 
@@ -140,14 +141,14 @@ GitHub → Actions → Deploy CryptoTracker → Azure App Service
 | Tarefa | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | S13 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Brainstorming / Relatório 1ª Fase | ✅ | | | | | | | | | | | | |
-| Implementação App Service + GitHub | | ✅ | ✅ | | | | | | | | | | |
-| Implementação Azure Function | | | ✅ | ✅ | ✅ | | | | | | | | |
+| Implementação App Service + GitHub | | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| Implementação Azure Function | | ✅ | ✅ | ✅ | | | | | | | | | |
 | Implementação Cosmos DB | | | | ✅ | ✅ | ✅ | | | | | | | |
-| Implementação Blob Storage | | | | | ✅ | ✅ | ✅ | | | | | | |
-| Implementação Docker | | | | | | ✅ | ✅ | ✅ | | | | | |
-| Relatório 2ª Fase | | | | | | | ✅ | ✅ | | | | | |
-| Implementação Terraform | | | | | | | | | ✅ | ✅ | ✅ | | |
-| Testes & Correção de Bugs | | | | | | | | | | ✅ | ✅ | ✅ | |
+| Implementação Blob Storage | | | | | ✅ | ✅ | ✅ | ✅ | | | | | |
+| Implementação Docker | | | | | ✅ | ✅ | ✅ | ✅ | | | | | |
+| Relatório 2ª Fase | | | | | | |  | ✅ | | | | | |
+| Implementação Terraform | | | | | | | | | ✅ | ✅ | ✅ | ✅ | |
+| Testes & Correção de Bugs | | | | | | | | | ✅ | ✅ | ✅ | ✅ | |
 | Relatório Final | | | | | | | | | | | | | ✅ |
 
 > Semanas entre **23 de fevereiro** e **22 de maio de 2026**
@@ -157,14 +158,13 @@ GitHub → Actions → Deploy CryptoTracker → Azure App Service
 ## ❗ Problemas Comuns
 
 **O deploy falha no GitHub Actions**
-- Verifica se os secrets `AZURE_APP_NAME` e `AZURE_PUBLISH_PROFILE` estão corretos
-- Confirma que o `publish-profile.xml` foi copiado na íntegra (incluindo as tags XML)
+- Verifica no GitHub se os secrets `AZURE_APP_NAME` e `AZURE_PUBLISH_PROFILE` foram efetivamente criados pelo script.
 
 **Erro "App name already exists"**
-- O nome da app tem de ser único globalmente no Azure — tenta `cryptotracker-app-ipcb` ou similar
+- O nome da app tem de ser único globalmente no Azure — o sufixo `$RANDOM` no script normalmente resolve isto, mas podes tentar alterar manualmente no `azure.sh`.
 
-**A app retorna erro 503**
-- O Free tier pode demorar ~30 segundos a "acordar" na primeira visita (cold start)
+**A app demora a responder na primeira visita**
+- A app demora a responder na primeira visita
 
 **`az login` não abre o browser**
 - Usa `az login --use-device-code` como alternativa
