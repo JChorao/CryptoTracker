@@ -83,9 +83,6 @@ az webapp deployment list-publishing-profiles \
   --xml > publish-profile.xml
 echo "✅ Publish Profile guardado em 'publish-profile.xml'"
 echo ""
-echo "⚠️  IMPORTANTE: Copia o conteúdo de 'publish-profile.xml' e adiciona"
-echo "    como secret no GitHub com o nome: AZURE_PUBLISH_PROFILE"
-echo "    GitHub → Settings → Secrets → Actions → New repository secret"
 
 # ─── 8. MOSTRAR URL DA APP ────────────────────────────────────────────────────
 echo ""

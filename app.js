@@ -1,27 +1,31 @@
-const express = require('express');
-const axios = require('axios');
-const app = express();
-const PORT = process.env.PORT || 3000;
+const express    = require('express');
+const http       = require('http');
+const path       = require('path');
+const axios      = require('axios');
+const socketio   = require('socket.io');
 
+const app    = express();
+const server = http.createServer(app);
+const io     = socketio(server);
+const PORT   = process.env.PORT || 3000;
+
+// ─── MOEDAS A MONITORIZAR ─────────────────────────────────────────────────────
+const COINS = ['bitcoin', 'ethereum', 'solana', 'cardano'];
+
+// Histórico em memória: { bitcoin: [{price, timestamp}, ...], ... }
+const coinData = {};
+COINS.forEach(c => coinData[c] = []);
+
+// ─── CONFIGURAÇÃO EXPRESS ─────────────────────────────────────────────────────
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── ROOT ────────────────────────────────────────────────────────────────────
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// ─── ROTA PRINCIPAL — renderiza o EJS com os dados atuais ─────────────────────
 app.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <head><title>CryptoTracker</title></head>
-      <body style="font-family:sans-serif; padding:2rem; background:#0f172a; color:#e2e8f0">
-        <h1>🚀 CryptoTracker</h1>
-        <p>Azure App Service está online!</p>
-        <ul>
-          <li><a href="/api/health" style="color:#38bdf8">GET /api/health</a> — Estado do servidor</li>
-          <li><a href="/api/crypto/bitcoin" style="color:#38bdf8">GET /api/crypto/:coin</a> — Preço de uma moeda</li>
-          <li><a href="/api/crypto" style="color:#38bdf8">GET /api/crypto</a> — Top moedas</li>
-        </ul>
-      </body>
-    </html>
-  `);
+  res.render('index', { coinData });
 });
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
@@ -30,11 +34,12 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'CryptoTracker',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    coins_tracked: COINS
   });
 });
 
-// ─── TOP CRIPTOMOEDAS ─────────────────────────────────────────────────────────
+// ─── API — TOP CRIPTOMOEDAS ───────────────────────────────────────────────────
 app.get('/api/crypto', async (req, res) => {
   try {
     const { data } = await axios.get(
@@ -42,9 +47,8 @@ app.get('/api/crypto', async (req, res) => {
       {
         params: {
           vs_currency: 'eur',
+          ids: COINS.join(','),
           order: 'market_cap_desc',
-          per_page: 10,
-          page: 1,
           sparkline: false
         }
       }
@@ -65,7 +69,7 @@ app.get('/api/crypto', async (req, res) => {
   }
 });
 
-// ─── PREÇO DE UMA MOEDA ESPECÍFICA ───────────────────────────────────────────
+// ─── API — PREÇO DE UMA MOEDA ESPECÍFICA ─────────────────────────────────────
 app.get('/api/crypto/:coin', async (req, res) => {
   const { coin } = req.params;
   try {
@@ -95,9 +99,58 @@ app.get('/api/crypto/:coin', async (req, res) => {
   }
 });
 
+// ─── RECOLHA PERIÓDICA DE PREÇOS (a cada 30s) ────────────────────────────────
+async function fetchPrices() {
+  try {
+    const { data } = await axios.get(
+      'https://api.coingecko.com/api/v3/simple/price',
+      {
+        params: {
+          ids: COINS.join(','),
+          vs_currencies: 'eur'
+        }
+      }
+    );
+
+    const newPrices = {};
+
+    COINS.forEach(coin => {
+      if (!data[coin]) return;
+
+      const price = data[coin].eur;
+      const entry = { price, timestamp: new Date().toISOString() };
+
+      // Guarda no histórico (máx 100 entradas por moeda)
+      coinData[coin].unshift(entry);
+      if (coinData[coin].length > 100) coinData[coin].pop();
+
+      newPrices[coin] = price;
+    });
+
+    // Emite para todos os clientes ligados via Socket.IO
+    io.emit('priceUpdate', newPrices);
+    console.log(`[${new Date().toLocaleTimeString('pt-PT')}] Preços atualizados:`, newPrices);
+
+  } catch (err) {
+    console.error('Erro ao recolher preços:', err.message);
+  }
+}
+
+// Primeira recolha imediata + intervalo de 30 segundos
+fetchPrices();
+setInterval(fetchPrices, 30000);
+
+// ─── SOCKET.IO — ligação de clientes ─────────────────────────────────────────
+io.on('connection', (socket) => {
+  console.log(`Cliente ligado: ${socket.id}`);
+  socket.on('disconnect', () => {
+    console.log(`Cliente desligado: ${socket.id}`);
+  });
+});
+
 // ─── START ────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`✅ CryptoTracker a correr na porta ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`✅ CryptoTracker a correr em http://localhost:${PORT}`);
 });
 
 module.exports = app;
