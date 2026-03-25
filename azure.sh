@@ -1,111 +1,149 @@
 #!/bin/bash
+
+set -e
+
+
 # =============================================================================
-#  CryptoTracker — Setup Azure App Service (Tier B1) + GitHub Deploy
+
+#  CONFIGURAÇÕES - ALTERA ESTES VALORES
+
 # =============================================================================
 
-set -e  # Interrompe o script se houver algum erro
+# Google Cloud
 
-# ─── CONFIGURAÇÕES ───────────────────────────────────────────────────────────
-RESOURCE_GROUP="rg-cryptotracker"
-LOCATION="francecentral"
-APP_SERVICE_PLAN="plan-cryptotracker"
-APP_NAME="cryptotracker-app-$RANDOM"  
-GITHUB_REPO="https://github.com/JChorao/CryptoTracker"
-GITHUB_BRANCH="main"
-NODE_VERSION="NODE|22-lts"
+GCP_PROJECT_ID="cryptotracker" # Substitui pelo teu ID de projeto no GCP
 
-echo "============================================="
-echo "  🚀 CryptoTracker — Azure App Service Setup"
-echo "============================================="
+GCP_LOCATION="eur3" # eur3 é multi-region (Europa)
 
-# ─── 1. CRIAR RESOURCE GROUP ─────────────────────────────────────────────────
-echo ""
-echo "📌 Passo 1: Criar Resource Group '$RESOURCE_GROUP' em '$LOCATION'..."
-az group create \
-  --name "$RESOURCE_GROUP" \
-  --location "$LOCATION"
-echo "✅ Resource Group criado."
 
-# ─── 2. CRIAR APP SERVICE PLAN (Tier B1) ─────────────────────────────────────
-echo ""
-echo "📌 Passo 2: Criar App Service Plan '$APP_SERVICE_PLAN' (Tier B1)..."
-az appservice plan create \
-  --name "$APP_SERVICE_PLAN" \
-  --resource-group "$RESOURCE_GROUP" \
-  --sku B1 \
-  --is-linux
-echo "✅ App Service Plan criado."
+# Azure
 
-# ─── 3. CRIAR WEB APP ────────────────────────────────────────────────────────
-echo ""
-echo "📌 Passo 3: Criar Web App '$APP_NAME' com Node.js..."
-az webapp create \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --plan "$APP_SERVICE_PLAN" \
-  --runtime "$NODE_VERSION"
-echo "✅ Web App criada."
+AZ_RG="rg-cryptotracker"
 
-# ─── 4. CONFIGURAR VARIÁVEIS DE AMBIENTE ─────────────────────────────────────
-echo ""
-echo "📌 Passo 4: Configurar variáveis de ambiente..."
-az webapp config appsettings set \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --settings \
-    NODE_ENV="production" \
-    PORT="8080"
-echo "✅ Variáveis configuradas."
+AZ_LOCATION="francecentral"
 
-# ─── 5. ATIVAR SCM BASIC AUTHENTICATION (CORREÇÃO) ───────────────────────────
-echo ""
-echo "📌 Passo 5: Ativar SCM Basic Authentication..."
-az resource update \
-  --resource-group "$RESOURCE_GROUP" \
-  --name scm \
-  --namespace Microsoft.Web \
-  --resource-type basicPublishingCredentialsPolicies \
-  --parent sites/"$APP_NAME" \
-  --set properties.allow=true
-echo "✅ SCM Basic Auth ativado."
+AZ_APP_NAME="cryptotracker-app-$RANDOM"
 
-# ─── 6. LIGAR AO GITHUB (CI/CD) ──────────────────────────────────────────────
-echo ""
-echo "📌 Passo 6: Configurar integração manual (esperar pelo GitHub Actions)..."
-az webapp deployment source config \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --repo-url "$GITHUB_REPO" \
-  --branch "$GITHUB_BRANCH" \
-  --manual-integration
+AZ_FUNC_NAME="cryptotracker-func-$RANDOM"
 
-echo "✅ Integração manual configurada."
+AZ_STORAGE="stcryptotrack$RANDOM"
 
-# ─── 7. OBTER PUBLISH PROFILE E CONFIGURAR GITHUB SECRETS ────────────────────
-echo ""
-echo "📌 Passo 7: A extrair Publish Profile e a configurar Secrets no GitHub..."
-az webapp deployment list-publishing-profiles \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --xml > publish-profile.xml
 
-# Usar a GitHub CLI para guardar os secrets no repositório remoto
-gh secret set AZURE_PUBLISH_PROFILE < publish-profile.xml --repo "JChorao/CryptoTracker"
-gh secret set AZURE_APP_NAME --body "$APP_NAME" --repo "JChorao/CryptoTracker"
+# GitHub
 
-# Limpar o ficheiro sensível localmente
-rm publish-profile.xml
-echo "✅ Secrets (AZURE_APP_NAME e AZURE_PUBLISH_PROFILE) criados com sucesso no GitHub!"
+GH_REPO="JChorao/CryptoTracker"
 
-# ─── 8. RESUMO E LINK DA APP ─────────────────────────────────────────────────
-echo ""
-echo "============================================="
-APP_URL=$(az webapp show \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --query "defaultHostName" -o tsv)
-echo "🌐 A tua App Service B1 está online em: https://$APP_URL"
-echo "============================================="
-echo ""
-echo "🎉 Setup concluído com sucesso!"
-echo "👉 Faz 'git commit' e 'git push' para a branch 'main' para disparar o Deploy pelo GitHub Actions."
+
+echo "------------------------------------------------------"
+
+echo "🚀 INICIANDO SETUP HÍBRIDO: AZURE + GOOGLE FIRESTORE"
+
+echo "------------------------------------------------------"
+
+
+# --- PARTE 1: GOOGLE CLOUD (FIRESTORE) ---
+
+echo "📌 [GOOGLE] A configurar projeto e Firestore..."
+
+gcloud config set project "$GCP_PROJECT_ID"
+
+
+# Criar a base de dados Firestore (se não existir)
+
+# --type=firestore-native garante que usas o modo nativo
+
+gcloud alpha firestore databases create \
+
+    --location="$GCP_LOCATION" \
+
+    --type=firestore-native || echo "⚠️ Firestore já existe ou erro na criação."
+
+
+# Criar Service Account para a Azure Function
+
+echo "📌 [GOOGLE] A criar Service Account para acesso externo..."
+
+SA_NAME="azure-func-link"
+
+gcloud iam service-accounts create $SA_NAME --display-name="Azure Function Firestore Access"
+
+
+# Dar permissão de escrita no Firestore
+
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+
+    --member="serviceAccount:$SA_NAME@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+
+    --role="roles/datastore.user"
+
+
+# Gerar a chave JSON e guardar localmente
+
+gcloud iam service-accounts keys create google-key.json \
+
+    --iam-account="$SA_NAME@$GCP_PROJECT_ID.iam.gserviceaccount.com"
+
+
+# --- PARTE 2: AZURE (COMPUTE) ---
+
+echo "📌 [AZURE] A criar Grupo de Recursos..."
+
+az group create --name "$AZ_RG" --location "$AZ_LOCATION"
+
+
+echo "📌 [AZURE] A criar App Service (B1)..."
+
+az appservice plan create --name "plan-crypto" --resource-group "$AZ_RG" --sku B1 --is-linux
+
+az webapp create --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --plan "plan-crypto" --runtime "NODE|22-lts"
+
+
+# Obter URL da App
+
+APP_URL="https://$(az webapp show --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --query "defaultHostName" -o tsv)"
+
+
+echo "📌 [AZURE] A criar Function App (Serverless)..."
+
+az storage account create --name "$AZ_STORAGE" --location "$AZ_LOCATION" --resource-group "$AZ_RG" --sku Standard_LRS
+
+az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --storage-account "$AZ_STORAGE" \
+
+    --consumption-plan-location "$AZ_LOCATION" --runtime node --runtime-version 20 --functions-version 4 --os-type Linux
+
+
+# Configurar Variáveis de Ambiente na Azure Function
+
+az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings \
+
+    APP_SERVICE_URL="$APP_URL" \
+
+    GOOGLE_CLOUD_PROJECT="$GCP_PROJECT_ID" \
+
+    GOOGLE_APPLICATION_CREDENTIALS="/home/site/wwwroot/google-key.json"
+
+
+# --- PARTE 3: GITHUB SECRETS ---
+
+echo "📌 [GITHUB] A configurar segredos para Deploy..."
+
+az webapp deployment list-publishing-profiles --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --xml > publish.xml
+
+gh secret set AZURE_PUBLISH_PROFILE < publish.xml --repo "$GH_REPO"
+
+gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
+
+rm publish.xml
+
+
+echo "------------------------------------------------------"
+
+echo "✅ SETUP CONCLUÍDO!"
+
+echo "📍 Firestore Criado em: $GCP_LOCATION"
+
+echo "🔑 Chave 'google-key.json' gerada (Mantém este ficheiro seguro!)"
+
+echo "🌐 Web App: $APP_URL"
+
+echo "------------------------------------------------------"
