@@ -19,8 +19,11 @@ AZ_COSMOS_DB="CryptoDB"
 AZ_COSMOS_CONTAINER="PriceHistory"
 GH_REPO="JChorao/CryptoTracker" # <-- Confirma se é o teu repositório
 
+# Garante que o Git Bash no Windows não estraga nenhum caminho que comece por "/"
+export MSYS_NO_PATHCONV=1
+
 echo "------------------------------------------------------------------"
-echo "🚀 SETUP FINAL: COSMOS DB + APP SERVICE + FUNCTION (TOKEN AUTH)"
+echo "🚀 SETUP FINAL: INFRAESTRUTURA + TOKEN AUTH + AUTO-RERUN"
 echo "------------------------------------------------------------------"
 
 echo "📌 A criar Grupo de Recursos..."
@@ -34,8 +37,7 @@ echo "📌 A configurar Base de Dados e Contentor..."
 az cosmosdb sql database create --account-name "$AZ_COSMOS_ACCOUNT" \
     --resource-group "$AZ_RG" --name "$AZ_COSMOS_DB"
 
-# MSYS_NO_PATHCONV impede o Git Bash de alterar o caminho /partitionKey no Windows
-MSYS_NO_PATHCONV=1 az cosmosdb sql container create \
+az cosmosdb sql container create \
     --account-name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" \
     --database-name "$AZ_COSMOS_DB" --name "$AZ_COSMOS_CONTAINER" \
     --partition-key-path "/partitionKey" --throughput 400
@@ -61,35 +63,43 @@ az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" \
     --runtime node --runtime-version 24 --functions-version 4 --os-type Windows
 
 echo "📌 A configurar Variáveis de Ambiente..."
-# Web App
 az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --settings \
-    COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
-    COSMOS_DB_NAME="$AZ_COSMOS_DB" \
-    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" > /dev/null
+    COSMOS_CONNECTION_STRING="$COSMOS_CONN" COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" > /dev/null
 
-# Function App
 az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings \
-    COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
-    COSMOS_DB_NAME="$AZ_COSMOS_DB" \
-    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" \
-    APP_SERVICE_URL="$APP_URL" > /dev/null
+    COSMOS_CONNECTION_STRING="$COSMOS_CONN" COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" APP_SERVICE_URL="$APP_URL" > /dev/null
 
 echo "📌 🔐 A gerar Identidade Segura (Service Principal Token)..."
-# Descobrir o ID da Subscrição
-SUB_ID=$(az account show --query id -o tsv)
+# TRUQUE DE MESTRE: Buscar o Scope exato diretamente à Azure para evitar o bug do Git Bash
+RG_SCOPE=$(az group show --name "$AZ_RG" --query id -o tsv)
 
-# Criar um Token com permissões limitadas apenas a este Grupo de Recursos
-# (Nota: Pode aparecer um aviso amarelo sobre "sdk-auth ser deprecated", é normal e podes ignorar!)
 SP_JSON=$(az ad sp create-for-rbac --name "CryptoDeploy-$ID" \
                                    --role contributor \
-                                   --scopes /subscriptions/$SUB_ID/resourceGroups/$AZ_RG \
+                                   --scopes "$RG_SCOPE" \
                                    --sdk-auth)
 
-echo "📌 A configurar GitHub Secrets (Token, Web App e Function App)..."
+echo "📌 A enviar Secrets para o GitHub..."
 gh secret set AZURE_CREDENTIALS --body "$SP_JSON" --repo "$GH_REPO"
 gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
 gh secret set AZURE_FUNC_NAME --body "$AZ_FUNC_NAME" --repo "$GH_REPO"
 
-echo "✅ SETUP CONCLUÍDO COM SUCESSO E PROTEGIDO POR TOKEN!"
+echo "------------------------------------------------------------------"
+echo "🤖 A INICIAR DEPLOYS AUTOMÁTICOS NO GITHUB ACTIONS..."
+echo "------------------------------------------------------------------"
+sleep 5 
+
+WEB_RUN_ID=$(gh run list --workflow=deploy.yml --limit 1 --json databaseId -q '.[0].databaseId')
+if [ -n "$WEB_RUN_ID" ]; then
+    echo "▶️ A relançar o deploy da Web App (Run ID: $WEB_RUN_ID)..."
+    gh run rerun $WEB_RUN_ID || echo "⚠️ Não foi possível relançar a Web App."
+fi
+
+FUNC_RUN_ID=$(gh run list --workflow=deploy-function.yml --limit 1 --json databaseId -q '.[0].databaseId')
+if [ -n "$FUNC_RUN_ID" ]; then
+    echo "▶️ A relançar o deploy da Azure Function (Run ID: $FUNC_RUN_ID)..."
+    gh run rerun $FUNC_RUN_ID || echo "⚠️ Não foi possível relançar a Function."
+fi
+
+echo "✅ TUDO PRONTO! Os deploys estão a correr agora mesmo no GitHub."
 echo "🌐 Web App URL: $APP_URL"
 echo "⚡ Function Name: $AZ_FUNC_NAME"
