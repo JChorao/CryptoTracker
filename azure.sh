@@ -4,11 +4,12 @@ set -e
 # =============================================================================
 #  CONFIGURAÇÕES GERAIS
 # =============================================================================
-AZ_RG="rg-cryptotracker"
+
 AZ_LOCATION="francecentral"
 
 # Sufixo aleatório para garantir unicidade global
 ID=$RANDOM
+AZ_RG="rg-cryptotracker-$ID"
 AZ_APP_NAME="cryptotracker-app-$ID"
 AZ_FUNC_NAME="cryptotracker-func-$ID"
 AZ_STORAGE="stcryptotrack$ID"
