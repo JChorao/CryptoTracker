@@ -20,7 +20,7 @@ AZ_COSMOS_CONTAINER="PriceHistory"
 GH_REPO="JChorao/CryptoTracker" # <-- Confirma se é o teu repositório
 
 echo "------------------------------------------------------------------"
-echo "🚀 SETUP FINAL: COSMOS DB + APP SERVICE + FUNCTION (WINDOWS)"
+echo "🚀 SETUP FINAL: COSMOS DB + APP SERVICE + FUNCTION (TOKEN AUTH)"
 echo "------------------------------------------------------------------"
 
 echo "📌 A criar Grupo de Recursos..."
@@ -65,33 +65,31 @@ echo "📌 A configurar Variáveis de Ambiente..."
 az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --settings \
     COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
     COSMOS_DB_NAME="$AZ_COSMOS_DB" \
-    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER"
+    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" > /dev/null
 
 # Function App
 az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings \
     COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
     COSMOS_DB_NAME="$AZ_COSMOS_DB" \
     COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" \
-    APP_SERVICE_URL="$APP_URL"
+    APP_SERVICE_URL="$APP_URL" > /dev/null
 
-echo "📌 A configurar GitHub Secrets (Web App e Function App)..."
+echo "📌 🔐 A gerar Identidade Segura (Service Principal Token)..."
+# Descobrir o ID da Subscrição
+SUB_ID=$(az account show --query id -o tsv)
 
-# --- SECRETS DA WEB APP ---
-az webapp deployment list-publishing-profiles --name "$AZ_APP_NAME" \
-    --resource-group "$AZ_RG" --xml > app-publish.xml
+# Criar um Token com permissões limitadas apenas a este Grupo de Recursos
+# (Nota: Pode aparecer um aviso amarelo sobre "sdk-auth ser deprecated", é normal e podes ignorar!)
+SP_JSON=$(az ad sp create-for-rbac --name "CryptoDeploy-$ID" \
+                                   --role contributor \
+                                   --scopes /subscriptions/$SUB_ID/resourceGroups/$AZ_RG \
+                                   --sdk-auth)
 
-gh secret set AZURE_PUBLISH_PROFILE < app-publish.xml --repo "$GH_REPO"
+echo "📌 A configurar GitHub Secrets (Token, Web App e Function App)..."
+gh secret set AZURE_CREDENTIALS --body "$SP_JSON" --repo "$GH_REPO"
 gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
-rm app-publish.xml
-
-# --- SECRETS DA FUNCTION APP ---
-az functionapp deployment list-publishing-profiles --name "$AZ_FUNC_NAME" \
-    --resource-group "$AZ_RG" --xml > func-publish.xml
-
-gh secret set AZURE_FUNCTION_PUBLISH_PROFILE < func-publish.xml --repo "$GH_REPO"
 gh secret set AZURE_FUNC_NAME --body "$AZ_FUNC_NAME" --repo "$GH_REPO"
-rm func-publish.xml
 
-echo "✅ SETUP CONCLUÍDO COM SUCESSO!"
+echo "✅ SETUP CONCLUÍDO COM SUCESSO E PROTEGIDO POR TOKEN!"
 echo "🌐 Web App URL: $APP_URL"
 echo "⚡ Function Name: $AZ_FUNC_NAME"
