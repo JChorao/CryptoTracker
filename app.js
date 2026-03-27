@@ -1,86 +1,57 @@
-const express    = require('express');
-const http       = require('http');
-const path       = require('path');
-const axios      = require('axios');
-const socketio   = require('socket.io');
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const { CosmosClient } = require("@azure/cosmos");
+const socketio = require('socket.io');
 
-const app    = express();
+const app = express();
 const server = http.createServer(app);
-const io     = socketio(server);
-const PORT   = process.env.PORT || 3000;
+const io = socketio(server);
+const PORT = process.env.PORT || 3000;
 
-// ─── MOEDAS A MONITORIZAR ─────────────────────────────────────────────────────
-const COINS = ['bitcoin', 'ethereum', 'solana', 'cardano'];
+// Liga ao Cosmos DB com as variáveis injetadas pelo script bash
+const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+const container = client.database(process.env.COSMOS_DB_NAME).container(process.env.COSMOS_CONTAINER_NAME);
 
-let coinData = {};
-COINS.forEach(c => coinData[c] = []);
-
-// ─── CONFIGURAÇÃO EXPRESS ─────────────────────────────────────────────────────
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── ROTA PRINCIPAL ───────────────────────────────────────────────────────────
-app.get('/', (req, res) => {
-  // Numa fase final, aqui farias uma query ao Cosmos DB para obter o histórico inicial
-  res.render('index', { coinData });
-});
+// Quando o utilizador acede ao site, vai buscar o histórico
+app.get('/', async (req, res) => {
+    try {
+        // Vai buscar os últimos 60 registos ordenados do mais recente para o mais antigo
+        const { resources } = await container.items
+            .query("SELECT TOP 60 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
+            .fetchAll();
 
-// ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'CryptoTracker (Serverless Integrated)',
-    environment: process.env.NODE_ENV || 'development',
-    coins_tracked: COINS
-  });
-});
+        let coinData = { bitcoin: [], ethereum: [], solana: [], cardano: [] };
+        
+        // Inverte o array para o gráfico ficar cronológico (da esquerda para a direita)
+        resources.reverse().forEach(item => {
+            Object.keys(item.prices).forEach(coin => {
+                if (coinData[coin]) {
+                    coinData[coin].push({ 
+                        price: item.prices[coin].eur, 
+                        timestamp: item.timestamp 
+                    });
+                }
+            });
+        });
 
-// ─── ENDPOINT PARA A AZURE FUNCTION ──────────────────────────────────────────
-app.post('/api/update-prices', (req, res) => {
-  const newPrices = req.body;
-  
-  // Atualiza o histórico local em memória para novos utilizadores
-  Object.keys(newPrices).forEach(coin => {
-    if (COINS.includes(coin)) {
-      const entry = { price: newPrices[coin], timestamp: new Date().toISOString() };
-      coinData[coin].unshift(entry);
-      if (coinData[coin].length > 100) coinData[coin].pop();
+        res.render('index', { coinData });
+    } catch (err) {
+        console.error("⚠️ Erro ao ler do Cosmos DB:", err.message);
+        // Se falhar (ex: a BD ainda está vazia), renderiza arrays vazios
+        res.render('index', { coinData: { bitcoin: [], ethereum: [], solana: [], cardano: [] } });
     }
-  });
-
-  // Emite para os clientes via Socket.io
-  io.emit('priceUpdate', newPrices);
-  
-  res.status(200).send('Preços atualizados no frontend');
 });
 
-// ─── API — OUTRAS ROTAS (Mantidas para consulta manual) ──────────────────────
-app.get('/api/crypto', async (req, res) => {
-  try {
-    const { data } = await axios.get('https://api.coingecko.com/api/v3/coins/markets', {
-      params: { vs_currency: 'eur', ids: COINS.join(','), order: 'market_cap_desc' }
-    });
-    const coins = data.map(c => ({ id: c.id, symbol: c.symbol.toUpperCase(), price_eur: c.current_price }));
-    res.json({ success: true, coins });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
+// Rota chamada internamente pela Azure Function
+app.post('/api/update-prices', (req, res) => {
+    io.emit('priceUpdate', req.body); // Emite para o Frontend
+    res.status(200).send('Broadcast efetuado com sucesso');
 });
 
-// ─── SOCKET.IO ───────────────────────────────────────────────────────────────
-io.on('connection', (socket) => {
-  console.log(`Cliente ligado: ${socket.id}`);
-  socket.on('disconnect', () => console.log(`Cliente desligado: ${socket.id}`));
-});
-
-// ─── START ────────────────────────────────────────────────────────────────────
-server.listen(PORT, () => {
-  console.log(`✅ CryptoTracker Web App a correr em http://localhost:${PORT}`);
-  console.log(`💡 A aguardar atualizações da Azure Function...`);
-});
-
-module.exports = app;
+server.listen(PORT, () => console.log(`🚀 Servidor a correr na porta ${PORT}`));

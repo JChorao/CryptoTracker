@@ -1,149 +1,96 @@
 #!/bin/bash
-
 set -e
 
-
 # =============================================================================
-
-#  CONFIGURAÇÕES - ALTERA ESTES VALORES
-
+#  CONFIGURAÇÕES GERAIS
 # =============================================================================
-
-# Google Cloud
-
-GCP_PROJECT_ID="cryptotracker" # Substitui pelo teu ID de projeto no GCP
-
-GCP_LOCATION="eur3" # eur3 é multi-region (Europa)
-
-
-# Azure
-
 AZ_RG="rg-cryptotracker"
-
 AZ_LOCATION="francecentral"
 
-AZ_APP_NAME="cryptotracker-app-$RANDOM"
+# Sufixo aleatório para garantir unicidade global
+ID=$RANDOM
+AZ_APP_NAME="cryptotracker-app-$ID"
+AZ_FUNC_NAME="cryptotracker-func-$ID"
+AZ_STORAGE="stcryptotrack$ID"
+AZ_COSMOS_ACCOUNT="cosmos-crypto-$ID"
 
-AZ_FUNC_NAME="cryptotracker-func-$RANDOM"
+AZ_COSMOS_DB="CryptoDB"
+AZ_COSMOS_CONTAINER="PriceHistory"
+GH_REPO="JChorao/CryptoTracker" # <-- Confirma se é o teu repositório
 
-AZ_STORAGE="stcryptotrack$RANDOM"
+echo "------------------------------------------------------------------"
+echo "🚀 SETUP FINAL: COSMOS DB + APP SERVICE + FUNCTION (WINDOWS)"
+echo "------------------------------------------------------------------"
 
-
-# GitHub
-
-GH_REPO="JChorao/CryptoTracker"
-
-
-echo "------------------------------------------------------"
-
-echo "🚀 INICIANDO SETUP HÍBRIDO: AZURE + GOOGLE FIRESTORE"
-
-echo "------------------------------------------------------"
-
-
-# --- PARTE 1: GOOGLE CLOUD (FIRESTORE) ---
-
-echo "📌 [GOOGLE] A configurar projeto e Firestore..."
-
-gcloud config set project "$GCP_PROJECT_ID"
-
-
-# Criar a base de dados Firestore (se não existir)
-
-# --type=firestore-native garante que usas o modo nativo
-
-gcloud alpha firestore databases create \
-
-    --location="$GCP_LOCATION" \
-
-    --type=firestore-native || echo "⚠️ Firestore já existe ou erro na criação."
-
-
-# Criar Service Account para a Azure Function
-
-echo "📌 [GOOGLE] A criar Service Account para acesso externo..."
-
-SA_NAME="azure-func-link"
-
-gcloud iam service-accounts create $SA_NAME --display-name="Azure Function Firestore Access"
-
-
-# Dar permissão de escrita no Firestore
-
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-
-    --member="serviceAccount:$SA_NAME@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
-
-    --role="roles/datastore.user"
-
-
-# Gerar a chave JSON e guardar localmente
-
-gcloud iam service-accounts keys create google-key.json \
-
-    --iam-account="$SA_NAME@$GCP_PROJECT_ID.iam.gserviceaccount.com"
-
-
-# --- PARTE 2: AZURE (COMPUTE) ---
-
-echo "📌 [AZURE] A criar Grupo de Recursos..."
-
+echo "📌 A criar Grupo de Recursos..."
 az group create --name "$AZ_RG" --location "$AZ_LOCATION"
 
+echo "📌 A criar Cosmos DB (Standard - 400 RU/s)..."
+az cosmosdb create --name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" \
+    --kind GlobalDocumentDB --locations regionName="$AZ_LOCATION" failoverPriority=0
 
-echo "📌 [AZURE] A criar App Service (B1)..."
+echo "📌 A configurar Base de Dados e Contentor..."
+az cosmosdb sql database create --account-name "$AZ_COSMOS_ACCOUNT" \
+    --resource-group "$AZ_RG" --name "$AZ_COSMOS_DB"
 
+# MSYS_NO_PATHCONV impede o Git Bash de alterar o caminho /partitionKey no Windows
+MSYS_NO_PATHCONV=1 az cosmosdb sql container create \
+    --account-name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" \
+    --database-name "$AZ_COSMOS_DB" --name "$AZ_COSMOS_CONTAINER" \
+    --partition-key-path "/partitionKey" --throughput 400
+
+COSMOS_CONN=$(az cosmosdb keys list --type connection-strings \
+    --name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" \
+    --query "connectionStrings[0].connectionString" -o tsv)
+
+echo "📌 A criar App Service (Linux B1)..."
 az appservice plan create --name "plan-crypto" --resource-group "$AZ_RG" --sku B1 --is-linux
-
-az webapp create --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --plan "plan-crypto" --runtime "NODE|22-lts"
-
-
-# Obter URL da App
+az webapp create --name "$AZ_APP_NAME" --resource-group "$AZ_RG" \
+    --plan "plan-crypto" --runtime "NODE|22-lts"
 
 APP_URL="https://$(az webapp show --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --query "defaultHostName" -o tsv)"
 
+echo "📌 A criar Storage Account (Requisito da Function)..."
+az storage account create --name "$AZ_STORAGE" --location "$AZ_LOCATION" \
+    --resource-group "$AZ_RG" --sku Standard_LRS
 
-echo "📌 [AZURE] A criar Function App (Serverless)..."
+echo "📌 A criar Function App (Windows Serverless - Node 24)..."
+az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" \
+    --storage-account "$AZ_STORAGE" --consumption-plan-location "$AZ_LOCATION" \
+    --runtime node --runtime-version 24 --functions-version 4 --os-type Windows
 
-az storage account create --name "$AZ_STORAGE" --location "$AZ_LOCATION" --resource-group "$AZ_RG" --sku Standard_LRS
+echo "📌 A configurar Variáveis de Ambiente..."
+# Web App
+az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --settings \
+    COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
+    COSMOS_DB_NAME="$AZ_COSMOS_DB" \
+    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER"
 
-az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --storage-account "$AZ_STORAGE" \
-
-    --consumption-plan-location "$AZ_LOCATION" --runtime node --runtime-version 20 --functions-version 4 --os-type Linux
-
-
-# Configurar Variáveis de Ambiente na Azure Function
-
+# Function App
 az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings \
+    COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
+    COSMOS_DB_NAME="$AZ_COSMOS_DB" \
+    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" \
+    APP_SERVICE_URL="$APP_URL"
 
-    APP_SERVICE_URL="$APP_URL" \
+echo "📌 A configurar GitHub Secrets (Web App e Function App)..."
 
-    GOOGLE_CLOUD_PROJECT="$GCP_PROJECT_ID" \
+# --- SECRETS DA WEB APP ---
+az webapp deployment list-publishing-profiles --name "$AZ_APP_NAME" \
+    --resource-group "$AZ_RG" --xml > app-publish.xml
 
-    GOOGLE_APPLICATION_CREDENTIALS="/home/site/wwwroot/google-key.json"
-
-
-# --- PARTE 3: GITHUB SECRETS ---
-
-echo "📌 [GITHUB] A configurar segredos para Deploy..."
-
-az webapp deployment list-publishing-profiles --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --xml > publish.xml
-
-gh secret set AZURE_PUBLISH_PROFILE < publish.xml --repo "$GH_REPO"
-
+gh secret set AZURE_PUBLISH_PROFILE < app-publish.xml --repo "$GH_REPO"
 gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
+rm app-publish.xml
 
-rm publish.xml
+# --- SECRETS DA FUNCTION APP ---
+az functionapp deployment list-publishing-profiles --name "$AZ_FUNC_NAME" \
+    --resource-group "$AZ_RG" --xml > func-publish.xml
 
+gh secret set AZURE_FUNCTION_PUBLISH_PROFILE < func-publish.xml --repo "$GH_REPO"
+gh secret set AZURE_FUNC_NAME --body "$AZ_FUNC_NAME" --repo "$GH_REPO"
+rm func-publish.xml
 
-echo "------------------------------------------------------"
-
-echo "✅ SETUP CONCLUÍDO!"
-
-echo "📍 Firestore Criado em: $GCP_LOCATION"
-
-echo "🔑 Chave 'google-key.json' gerada (Mantém este ficheiro seguro!)"
-
-echo "🌐 Web App: $APP_URL"
-
-echo "------------------------------------------------------"
+echo "✅ SETUP CONCLUÍDO COM SUCESSO!"
+echo "🌐 Web App URL: $APP_URL"
+echo "⚡ Function Name: $AZ_FUNC_NAME"
