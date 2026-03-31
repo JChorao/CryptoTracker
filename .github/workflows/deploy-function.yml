@@ -7,18 +7,18 @@ on:
 
 jobs:
   build-and-deploy-function:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node.js 24
+      - name: ⚙️ Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
 
       - name: 📦 Instalar dependências da Function
-        shell: bash
+        shell: pwsh
         run: |
           cd functions
           npm install
@@ -32,5 +32,4 @@ jobs:
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNC_NAME }}
-          publish-profile: ${{ secrets.AZURE_FUNCTION_PUBLISH_PROFILE }} # Usa o perfil aqui
           package: ./functions

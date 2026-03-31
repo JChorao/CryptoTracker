@@ -34,11 +34,11 @@ az webapp create --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --plan "plan-cr
 
 APP_URL="https://$(az webapp show --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --query "defaultHostName" -o tsv)"
 
-echo "📌 A criar Function App (Serverless - Node 20)..."
+echo "📌 A criar Function App (Serverless Windows - Node 20)..."
 az storage account create --name "$AZ_STORAGE" --location "$AZ_LOCATION" --resource-group "$AZ_RG" --sku Standard_LRS
 az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" \
     --storage-account "$AZ_STORAGE" --consumption-plan-location "$AZ_LOCATION" \
-    --runtime node --runtime-version 20 --functions-version 4 --os-type Linux
+    --runtime node --runtime-version 20 --functions-version 4 --os-type Windows
 
 echo "📌 A configurar Variáveis de Ambiente..."
 az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --settings \
