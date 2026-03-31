@@ -1,111 +1,52 @@
 #!/bin/bash
-# =============================================================================
-#  CryptoTracker — Setup Azure App Service (Tier B1) + GitHub Deploy
-# =============================================================================
+set -e
 
-set -e  # Interrompe o script se houver algum erro
+AZ_LOCATION="francecentral"
+ID=$RANDOM
+AZ_RG="rg-cryptotracker-$ID"
+AZ_APP_NAME="cryptotracker-app-$ID"
+AZ_FUNC_NAME="cryptotracker-func-$ID"
+AZ_STORAGE="stcryptotrack$ID"
+AZ_COSMOS_ACCOUNT="cosmos-crypto-$ID"
+AZ_COSMOS_DB="CryptoDB"
+AZ_COSMOS_CONTAINER="PriceHistory"
+GH_REPO="JChorao/CryptoTracker" 
 
-# ─── CONFIGURAÇÕES ───────────────────────────────────────────────────────────
-RESOURCE_GROUP="rg-cryptotracker"
-LOCATION="francecentral"
-APP_SERVICE_PLAN="plan-cryptotracker"
-APP_NAME="cryptotracker-app-$RANDOM"  
-GITHUB_REPO="https://github.com/JChorao/CryptoTracker"
-GITHUB_BRANCH="main"
-NODE_VERSION="NODE|22-lts"
+export MSYS_NO_PATHCONV=1
 
-echo "============================================="
-echo "  🚀 CryptoTracker — Azure App Service Setup"
-echo "============================================="
+echo "📌 A criar recursos na Azure (Node 24)..."
+az group create --name "$AZ_RG" --location "$AZ_LOCATION"
 
-# ─── 1. CRIAR RESOURCE GROUP ─────────────────────────────────────────────────
-echo ""
-echo "📌 Passo 1: Criar Resource Group '$RESOURCE_GROUP' em '$LOCATION'..."
-az group create \
-  --name "$RESOURCE_GROUP" \
-  --location "$LOCATION"
-echo "✅ Resource Group criado."
+# Cosmos DB
+az cosmosdb create --name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" --kind GlobalDocumentDB --locations regionName="$AZ_LOCATION" failoverPriority=0
+az cosmosdb sql database create --account-name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" --name "$AZ_COSMOS_DB"
+az cosmosdb sql container create --account-name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" --database-name "$AZ_COSMOS_DB" --name "$AZ_COSMOS_CONTAINER" --partition-key-path "/partitionKey" --throughput 400
+COSMOS_CONN=$(az cosmosdb keys list --type connection-strings --name "$AZ_COSMOS_ACCOUNT" --resource-group "$AZ_RG" --query "connectionStrings[0].connectionString" -o tsv)
 
-# ─── 2. CRIAR APP SERVICE PLAN (Tier B1) ─────────────────────────────────────
-echo ""
-echo "📌 Passo 2: Criar App Service Plan '$APP_SERVICE_PLAN' (Tier B1)..."
-az appservice plan create \
-  --name "$APP_SERVICE_PLAN" \
-  --resource-group "$RESOURCE_GROUP" \
-  --sku B1 \
-  --is-linux
-echo "✅ App Service Plan criado."
+# App Service
+az appservice plan create --name "plan-crypto" --resource-group "$AZ_RG" --sku B1 --is-linux
+az webapp create --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --plan "plan-crypto" --runtime "NODE|24-lts"
+APP_URL="https://$(az webapp show --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --query "defaultHostName" -o tsv)"
 
-# ─── 3. CRIAR WEB APP ────────────────────────────────────────────────────────
-echo ""
-echo "📌 Passo 3: Criar Web App '$APP_NAME' com Node.js..."
-az webapp create \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --plan "$APP_SERVICE_PLAN" \
-  --runtime "$NODE_VERSION"
-echo "✅ Web App criada."
+# Function App
+az storage account create --name "$AZ_STORAGE" --location "$AZ_LOCATION" --resource-group "$AZ_RG" --sku Standard_LRS
+az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --storage-account "$AZ_STORAGE" --consumption-plan-location "$AZ_LOCATION" --runtime node --runtime-version 24 --functions-version 4 --os-type Windows
 
-# ─── 4. CONFIGURAR VARIÁVEIS DE AMBIENTE ─────────────────────────────────────
-echo ""
-echo "📌 Passo 4: Configurar variáveis de ambiente..."
-az webapp config appsettings set \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --settings \
-    NODE_ENV="production" \
-    PORT="8080"
-echo "✅ Variáveis configuradas."
+# Configurações
+az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --settings COSMOS_CONNECTION_STRING="$COSMOS_CONN" COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" > /dev/null
+az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings COSMOS_CONNECTION_STRING="$COSMOS_CONN" COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" APP_SERVICE_URL="$APP_URL" > /dev/null
 
-# ─── 5. ATIVAR SCM BASIC AUTHENTICATION (CORREÇÃO) ───────────────────────────
-echo ""
-echo "📌 Passo 5: Ativar SCM Basic Authentication..."
-az resource update \
-  --resource-group "$RESOURCE_GROUP" \
-  --name scm \
-  --namespace Microsoft.Web \
-  --resource-type basicPublishingCredentialsPolicies \
-  --parent sites/"$APP_NAME" \
-  --set properties.allow=true
-echo "✅ SCM Basic Auth ativado."
+# GitHub Secrets
+RG_SCOPE=$(az group show --name "$AZ_RG" --query id -o tsv)
+SP_JSON=$(az ad sp create-for-rbac --name "CryptoDeploy-$ID" --role contributor --scopes "$RG_SCOPE" --sdk-auth)
 
-# ─── 6. LIGAR AO GITHUB (CI/CD) ──────────────────────────────────────────────
-echo ""
-echo "📌 Passo 6: Configurar integração manual (esperar pelo GitHub Actions)..."
-az webapp deployment source config \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --repo-url "$GITHUB_REPO" \
-  --branch "$GITHUB_BRANCH" \
-  --manual-integration
+gh secret set AZURE_CREDENTIALS --body "$SP_JSON" --repo "$GH_REPO"
+gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
+gh secret set AZURE_FUNC_NAME --body "$AZ_FUNC_NAME" --repo "$GH_REPO"
 
-echo "✅ Integração manual configurada."
+echo "🤖 A relançar deploys automáticos..."
+sleep 30
+gh run rerun $(gh run list --workflow=deploy.yml --limit 1 --json databaseId -q '.[0].databaseId') || true
+gh run rerun $(gh run list --workflow=deploy-function.yml --limit 1 --json databaseId -q '.[0].databaseId') || true
 
-# ─── 7. OBTER PUBLISH PROFILE E CONFIGURAR GITHUB SECRETS ────────────────────
-echo ""
-echo "📌 Passo 7: A extrair Publish Profile e a configurar Secrets no GitHub..."
-az webapp deployment list-publishing-profiles \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --xml > publish-profile.xml
-
-# Usar a GitHub CLI para guardar os secrets no repositório remoto
-gh secret set AZURE_PUBLISH_PROFILE < publish-profile.xml --repo "JChorao/CryptoTracker"
-gh secret set AZURE_APP_NAME --body "$APP_NAME" --repo "JChorao/CryptoTracker"
-
-# Limpar o ficheiro sensível localmente
-rm publish-profile.xml
-echo "✅ Secrets (AZURE_APP_NAME e AZURE_PUBLISH_PROFILE) criados com sucesso no GitHub!"
-
-# ─── 8. RESUMO E LINK DA APP ─────────────────────────────────────────────────
-echo ""
-echo "============================================="
-APP_URL=$(az webapp show \
-  --name "$APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --query "defaultHostName" -o tsv)
-echo "🌐 A tua App Service B1 está online em: https://$APP_URL"
-echo "============================================="
-echo ""
-echo "🎉 Setup concluído com sucesso!"
-echo "👉 Faz 'git commit' e 'git push' para a branch 'main' para disparar o Deploy pelo GitHub Actions."
+echo "✅ Concluído! App: $APP_URL"

@@ -33,7 +33,6 @@
             overflow-x: hidden;
         }
 
-        /* ── GRID BACKGROUND ── */
         body::before {
             content: '';
             position: fixed;
@@ -54,7 +53,6 @@
             padding: 48px 24px;
         }
 
-        /* ── HEADER ── */
         header {
             display: flex;
             align-items: flex-end;
@@ -64,310 +62,80 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .logo {
-            font-family: 'Syne', sans-serif;
-            font-weight: 800;
-            font-size: 2rem;
-            letter-spacing: -0.03em;
-            line-height: 1;
-        }
-
+        .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2rem; letter-spacing: -0.03em; line-height: 1; }
         .logo span { color: var(--gold); }
 
-        .header-meta {
-            text-align: right;
-        }
+        .header-meta { text-align: right; }
+        .live-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.65rem; letter-spacing: 0.15em; color: var(--green); text-transform: uppercase; margin-bottom: 4px; }
+        .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s ease-in-out infinite; }
 
-        .live-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.65rem;
-            letter-spacing: 0.15em;
-            color: var(--green);
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
 
-        .live-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--green);
-            animation: pulse 1.5s ease-in-out infinite;
-        }
+        .clock { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.08em; }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.7); }
-        }
-
-        .clock {
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            letter-spacing: 0.08em;
-        }
-
-        /* ── TABLE ── */
-        .crypto-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .crypto-table thead th {
-            font-size: 0.6rem;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            padding: 0 16px 16px;
-            border-bottom: 1px solid var(--border);
-            font-weight: 400;
-        }
-
+        .crypto-table { width: 100%; border-collapse: collapse; }
+        .crypto-table thead th { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); padding: 0 16px 16px; border-bottom: 1px solid var(--border); font-weight: 400; }
         .crypto-table thead th:last-child { text-align: right; }
         .crypto-table thead th:nth-child(3) { text-align: center; }
 
-        /* ── COIN ROW ── */
-        .coin-row {
-            cursor: pointer;
-            transition: background 0.2s;
-            border-bottom: 1px solid var(--border);
-            animation: rowIn 0.4s ease both;
-        }
-
-        @keyframes rowIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
+        .coin-row { cursor: pointer; transition: background 0.2s; border-bottom: 1px solid var(--border); animation: rowIn 0.4s ease both; }
+        @keyframes rowIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .coin-row:hover { background: rgba(255,255,255,0.02); }
         .coin-row.active { background: var(--gold-dim); border-bottom-color: transparent; }
+        .coin-row td { padding: 20px 16px; vertical-align: middle; }
 
-        .coin-row td {
-            padding: 20px 16px;
-            vertical-align: middle;
-        }
-
-        .coin-name {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-
-        .coin-sub {
-            font-size: 0.6rem;
-            color: var(--text-muted);
-            letter-spacing: 0.1em;
-            margin-top: 2px;
-        }
-
-        .price-val {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 1.15rem;
-            letter-spacing: -0.02em;
-            transition: color 0.3s;
-        }
+        .coin-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .coin-sub { font-size: 0.6rem; color: var(--text-muted); letter-spacing: 0.1em; margin-top: 2px; }
+        .price-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em; transition: color 0.3s; }
 
         .trend-cell { text-align: center; }
-
-        .trend-arrow {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            transition: all 0.3s;
-        }
-
-        .trend-up   { color: var(--green); background: rgba(14,203,129,0.1); }
-        .trend-down { color: var(--red);   background: rgba(246,70,93,0.1); }
+        .trend-arrow { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; font-size: 0.7rem; transition: all 0.3s; }
+        .trend-up { color: var(--green); background: rgba(14,203,129,0.1); }
+        .trend-down { color: var(--red); background: rgba(246,70,93,0.1); }
         .trend-flat { color: #555; background: rgba(255,255,255,0.04); }
 
-        .expand-btn {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--gold);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            padding: 6px 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-            float: right;
-        }
+        .expand-btn { background: transparent; border: 1px solid var(--border); color: var(--gold); font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 14px; border-radius: 4px; cursor: pointer; transition: all 0.2s; float: right; }
+        .expand-btn:hover, .coin-row.active .expand-btn { background: var(--gold); color: #000; border-color: var(--gold); }
 
-        .expand-btn:hover,
-        .coin-row.active .expand-btn {
-            background: var(--gold);
-            color: #000;
-            border-color: var(--gold);
-        }
-
-        /* ── DETAIL PANEL ── */
         .detail-row td { padding: 0; border: none; }
-
-        .detail-panel {
-            display: none;
-            background: var(--bg3);
-            border-bottom: 1px solid var(--border);
-            overflow: hidden;
-        }
-
+        .detail-panel { display: none; background: var(--bg3); border-bottom: 1px solid var(--border); overflow: hidden; }
         .detail-panel.open { display: block; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .detail-inner { display: grid; grid-template-columns: 280px 1fr; gap: 0; }
 
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .detail-inner {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 0;
-        }
-
-        /* ── CALCULATOR ── */
-        .calc-side {
-            padding: 28px;
-            border-right: 1px solid var(--border);
-        }
-
-        .calc-label {
-            font-size: 0.58rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--gold);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .calc-label::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--gold-dim);
-        }
-
-        .calc-input {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border);
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            padding: 10px 14px;
-            border-radius: 4px;
-            width: 100%;
-            margin-bottom: 10px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
+        .calc-side { padding: 28px; border-right: 1px solid var(--border); }
+        .calc-label { font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .calc-label::after { content: ''; flex: 1; height: 1px; background: var(--gold-dim); }
+        .calc-input { background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; padding: 10px 14px; border-radius: 4px; width: 100%; margin-bottom: 10px; outline: none; transition: border-color 0.2s; }
         .calc-input:focus { border-color: rgba(240,185,11,0.4); }
-        .calc-input::placeholder { color: #333; }
 
-        .profit-display {
-            background: rgba(0,0,0,0.4);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 16px;
-            margin-top: 4px;
-        }
-
-        .profit-label {
-            font-size: 0.58rem;
-            letter-spacing: 0.15em;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 6px;
-        }
-
-        .profit-amount {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #fff;
-            transition: color 0.3s;
-        }
-
+        .profit-display { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-top: 4px; }
+        .profit-label { font-size: 0.58rem; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .profit-amount { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; transition: color 0.3s; }
         .profit-amount.pos { color: var(--green); }
         .profit-amount.neg { color: var(--red); }
 
-        /* ── CHART SIDE ── */
-        .chart-side {
-            padding: 28px;
-            position: relative;
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .chart-title {
-            font-size: 0.58rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-        }
-
+        .chart-side { padding: 28px; position: relative; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .chart-title { font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
         .chart-container { height: 180px; }
 
-        /* ── FOOTER ── */
-        footer {
-            margin-top: 48px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .footer-text { font-size: 0.6rem; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; }
 
-        .footer-text {
-            font-size: 0.6rem;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        /* ── FLASH ANIMATION ON PRICE UPDATE ── */
-        @keyframes flashGreen {
-            0% { color: #fff; }
-            30% { color: var(--green); }
-            100% { color: #fff; }
-        }
-
-        @keyframes flashRed {
-            0% { color: #fff; }
-            30% { color: var(--red); }
-            100% { color: #fff; }
-        }
-
-        .flash-up   { animation: flashGreen 0.8s ease; }
+        @keyframes flashGreen { 0% { color: #fff; } 30% { color: var(--green); } 100% { color: #fff; } }
+        @keyframes flashRed { 0% { color: #fff; } 30% { color: var(--red); } 100% { color: #fff; } }
+        .flash-up { animation: flashGreen 0.8s ease; }
         .flash-down { animation: flashRed 0.8s ease; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
-
-    <!-- HEADER -->
     <header>
         <div>
             <div class="logo">CRYPTO<span>TRACKER</span></div>
-            <div style="font-size:0.62rem; color:var(--text-muted); letter-spacing:0.12em; margin-top:4px;">
-                COMPUTAÇÃO EM NUVEM — IPCB
-            </div>
+            <div style="font-size:0.62rem; color:var(--text-muted); letter-spacing:0.12em; margin-top:4px;">COMPUTAÇÃO EM NUVEM — IPCB</div>
         </div>
         <div class="header-meta">
             <div class="live-badge"><span class="live-dot"></span> Live</div>
@@ -375,7 +143,6 @@
         </div>
     </header>
 
-    <!-- TABLE -->
     <table class="crypto-table">
         <thead>
             <tr>
@@ -387,16 +154,15 @@
         </thead>
         <tbody>
             <% Object.keys(coinData).forEach((coin, i) => {
-                const cur = coinData[coin][0]?.price || 0;
+                const cur = coinData[coin][coinData[coin].length - 1]?.price || 0;
             %>
-            <tr class="coin-row" id="row-<%= coin %>" onclick="toggleDetail('<%= coin %>')"
-                style="animation-delay: <%= i * 0.07 %>s">
+            <tr class="coin-row" id="row-<%= coin %>" onclick="toggleDetail('<%= coin %>')" style="animation-delay: <%= i * 0.07 %>s">
                 <td>
                     <div class="coin-name"><%= coin %></div>
                     <div class="coin-sub">CoinGecko · EUR</div>
                 </td>
                 <td>
-                    <span class="price-val" id="price-<%= coin %>"><%= cur.toLocaleString('pt-PT', {minimumFractionDigits:2}) %>€</span>
+                    <span class="price-val" id="price-<%= coin %>" data-raw="<%= cur %>"><%= cur.toLocaleString('pt-PT', {minimumFractionDigits:2}) %>€</span>
                 </td>
                 <td class="trend-cell">
                     <span class="trend-arrow trend-flat" id="trend-<%= coin %>">—</span>
@@ -409,31 +175,22 @@
                 <td colspan="4">
                     <div class="detail-panel" id="detail-<%= coin %>">
                         <div class="detail-inner">
-
-                            <!-- CALCULATOR -->
                             <div class="calc-side">
                                 <div class="calc-label">Calc. Lucro</div>
-                                <input type="number" class="calc-input qty-in"
-                                    data-coin="<%= coin %>" placeholder="Quantidade">
-                                <input type="number" class="calc-input buy-in"
-                                    data-coin="<%= coin %>" placeholder="Preço de compra (€)">
+                                <input type="number" class="calc-input qty-in" data-coin="<%= coin %>" placeholder="Quantidade">
+                                <input type="number" class="calc-input buy-in" data-coin="<%= coin %>" placeholder="Preço de compra (€)">
                                 <div class="profit-display">
                                     <div class="profit-label">Ganho / Perda Est.</div>
                                     <div class="profit-amount" id="profit-<%= coin %>">0.00€</div>
                                 </div>
                             </div>
-
-                            <!-- CHART -->
                             <div class="chart-side">
                                 <div class="chart-header">
                                     <span class="chart-title">Histórico de Preço</span>
                                     <span style="font-size:0.6rem; color:var(--text-muted);" id="lastup-<%= coin %>"></span>
                                 </div>
-                                <div class="chart-container">
-                                    <canvas id="chart-<%= coin %>"></canvas>
-                                </div>
+                                <div class="chart-container"><canvas id="chart-<%= coin %>"></canvas></div>
                             </div>
-
                         </div>
                     </div>
                 </td>
@@ -442,37 +199,27 @@
         </tbody>
     </table>
 
-    <!-- FOOTER -->
     <footer>
         <span class="footer-text">CryptoTracker © 2026 — João Oliveira · Tiago Pinheiro · Tiago Covas</span>
         <span class="footer-text" id="update-counter">Atualizações: 0</span>
     </footer>
-
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const socket = io();
     const charts = {};
     const coinHistories = <%- JSON.stringify(coinData) %>;
     let updateCount = 0;
 
-    // ── CLOCK ──
-    function updateClock() {
-        document.getElementById('clock').textContent =
-            new Date().toLocaleTimeString('pt-PT');
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+    function updateClock() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('pt-PT'); }
+    setInterval(updateClock, 1000); updateClock();
 
-    // ── TOGGLE DETAIL ──
     function toggleDetail(coin) {
         const panel = document.getElementById(`detail-${coin}`);
         const row   = document.getElementById(`row-${coin}`);
         const btn   = document.getElementById(`btn-${coin}`);
         const isOpen = panel.classList.contains('open');
 
-        // close all
         document.querySelectorAll('.detail-panel.open').forEach(p => p.classList.remove('open'));
         document.querySelectorAll('.coin-row.active').forEach(r => r.classList.remove('active'));
         document.querySelectorAll('.expand-btn').forEach(b => b.textContent = '+ VER');
@@ -485,37 +232,36 @@
         }
     }
 
-    // ── INIT CHART ──
     function initChart(coin) {
         const ctx  = document.getElementById(`chart-${coin}`).getContext('2d');
-        const data = [...coinHistories[coin]].reverse();
+        const data = coinHistories[coin];
 
         charts[coin] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT')),
+                // AQUI: Adicionado second: '2-digit' para os dados iniciais do Cosmos DB
+                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })),
                 datasets: [{
                     data: data.map(d => d.price),
                     borderColor: '#f0b90b',
-                    borderWidth: 1.5,
-                    pointRadius: 0,
+                    borderWidth: 2,
+                    pointRadius: 4, 
+                    pointBackgroundColor: '#f0b90b',
+                    pointBorderColor: '#000',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 6,
                     tension: 0.4,
                     fill: true,
-                    backgroundColor: (ctx) => {
-                        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 180);
-                        g.addColorStop(0, 'rgba(240,185,11,0.15)');
-                        g.addColorStop(1, 'rgba(240,185,11,0)');
-                        return g;
-                    }
+                    backgroundColor: 'rgba(240,185,11,0.05)'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
+                plugins: { 
                     legend: { display: false },
                     tooltip: {
+                        // Tooltip estilizada que agora vai herdar as horas, minutos e segundos automaticamente
                         backgroundColor: '#0d0d0d',
                         borderColor: 'rgba(240,185,11,0.3)',
                         borderWidth: 1,
@@ -529,69 +275,63 @@
                     }
                 },
                 scales: {
-                    x: {
-                        ticks: { color: '#333', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 6 },
-                        grid:  { display: false },
-                        border: { color: 'rgba(255,255,255,0.05)' }
+                    x: { 
+                        display: true, 
+                        ticks: { 
+                            color: '#555', 
+                            font: { size: 9, family: 'JetBrains Mono' },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 10 
+                        }, 
+                        grid: { display: false },
+                        border: { color: 'rgba(255,255,255,0.1)' }
                     },
-                    y: {
-                        position: 'right',
-                        ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 9 },
-                            callback: v => v.toLocaleString('pt-PT') + '€' },
-                        grid:  { color: 'rgba(255,255,255,0.03)' },
-                        border: { display: false }
+                    y: { 
+                        position: 'right', 
+                        ticks: { color: '#555', font: { size: 9 } },
+                        border: { display: false },
+                        grid: { color: 'rgba(255,255,255,0.03)' }
                     }
                 }
             }
         });
     }
 
-    // ── REALTIME UPDATE ──
     socket.on('priceUpdate', (newPrices) => {
         updateCount++;
         document.getElementById('update-counter').textContent = `Atualizações: ${updateCount}`;
 
         Object.keys(newPrices).forEach(coin => {
-            const price    = newPrices[coin];
-            const priceEl  = document.getElementById(`price-${coin}`);
-            const trendEl  = document.getElementById(`trend-${coin}`);
-            const oldPrice = parseFloat(priceEl.textContent.replace('€','').replace(/\./g,'').replace(',','.'));
+            const price = newPrices[coin];
+            const priceEl = document.getElementById(`price-${coin}`);
+            const trendEl = document.getElementById(`trend-${coin}`);
+            const oldPrice = parseFloat(priceEl.getAttribute('data-raw') || 0);
+            const now = new Date();
 
             priceEl.textContent = price.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
+            priceEl.setAttribute('data-raw', price);
 
-            if (price > oldPrice) {
-                trendEl.textContent = '▲';
-                trendEl.className   = 'trend-arrow trend-up';
-                priceEl.classList.remove('flash-down'); void priceEl.offsetWidth;
-                priceEl.classList.add('flash-up');
-            } else if (price < oldPrice) {
-                trendEl.textContent = '▼';
-                trendEl.className   = 'trend-arrow trend-down';
-                priceEl.classList.remove('flash-up'); void priceEl.offsetWidth;
-                priceEl.classList.add('flash-down');
+            if (price > oldPrice && oldPrice > 0) {
+                trendEl.textContent = '▲'; trendEl.className = 'trend-arrow trend-up';
+                priceEl.classList.remove('flash-up', 'flash-down'); void priceEl.offsetWidth; priceEl.classList.add('flash-up');
+            } else if (price < oldPrice && oldPrice > 0) {
+                trendEl.textContent = '▼'; trendEl.className = 'trend-arrow trend-down';
+                priceEl.classList.remove('flash-up', 'flash-down'); void priceEl.offsetWidth; priceEl.classList.add('flash-down');
             }
 
-            // Update last-updated timestamp
-            const lu = document.getElementById(`lastup-${coin}`);
-            if (lu) lu.textContent = new Date().toLocaleTimeString('pt-PT');
-
-            // Update chart if open
             if (charts[coin]) {
                 const c = charts[coin];
-                c.data.labels.push(new Date().toLocaleTimeString('pt-PT'));
+                // AQUI: Adicionado second: '2-digit' para as novas atualizações do Socket.io
+                c.data.labels.push(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
                 c.data.datasets[0].data.push(price);
-                if (c.data.labels.length > 60) {
-                    c.data.labels.shift();
-                    c.data.datasets[0].data.shift();
-                }
+                if (c.data.labels.length > 60) { c.data.labels.shift(); c.data.datasets[0].data.shift(); }
                 c.update('none');
             }
-
             updateProfit(coin, price);
         });
     });
 
-    // ── PROFIT CALC ──
     function updateProfit(coin, currentPrice) {
         const qty = parseFloat(document.querySelector(`.qty-in[data-coin="${coin}"]`)?.value) || 0;
         const buy = parseFloat(document.querySelector(`.buy-in[data-coin="${coin}"]`)?.value) || 0;
@@ -600,21 +340,16 @@
 
         if (qty > 0 && buy > 0) {
             const total = (currentPrice - buy) * qty;
-            el.textContent = (total >= 0 ? '+' : '') +
-                total.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
+            el.textContent = (total >= 0 ? '+' : '') + total.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
             el.className = `profit-amount ${total >= 0 ? 'pos' : 'neg'}`;
-        } else {
-            el.textContent = '0.00€';
-            el.className   = 'profit-amount';
-        }
+        } else { el.textContent = '0.00€'; el.className = 'profit-amount'; }
     }
 
     document.addEventListener('input', e => {
         if (e.target.matches('.qty-in, .buy-in')) {
             const coin = e.target.dataset.coin;
-            const priceText = document.getElementById(`price-${coin}`)?.textContent || '0';
-            const currentPrice = parseFloat(priceText.replace('€','').replace(/\./g,'').replace(',','.'));
-            updateProfit(coin, currentPrice);
+            const curPrice = parseFloat(document.getElementById(`price-${coin}`).getAttribute('data-raw') || 0);
+            updateProfit(coin, curPrice);
         }
     });
 </script>
