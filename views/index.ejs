@@ -150,7 +150,7 @@
                 <th>Preço (EUR)</th>
                 <th style="text-align:center">Tendência</th>
                 <th style="text-align:right">Detalhe</th>
-            }
+            </tr>
         </thead>
         <tbody>
             <% Object.keys(coinData).forEach((coin, i) => {
@@ -239,12 +239,12 @@
         charts[coin] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })),
+                // AQUI: Adicionado second: '2-digit' para os dados iniciais do Cosmos DB
+                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })),
                 datasets: [{
                     data: data.map(d => d.price),
                     borderColor: '#f0b90b',
                     borderWidth: 2,
-                    // CORREÇÃO 1: Ativar os pontos (bolas)
                     pointRadius: 4, 
                     pointBackgroundColor: '#f0b90b',
                     pointBorderColor: '#000',
@@ -258,17 +258,31 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        // Tooltip estilizada que agora vai herdar as horas, minutos e segundos automaticamente
+                        backgroundColor: '#0d0d0d',
+                        borderColor: 'rgba(240,185,11,0.3)',
+                        borderWidth: 1,
+                        titleColor: '#888',
+                        bodyColor: '#f0b90b',
+                        titleFont: { family: 'JetBrains Mono', size: 10 },
+                        bodyFont:  { family: 'JetBrains Mono', size: 12 },
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y.toLocaleString('pt-PT', {minimumFractionDigits:2})}€`
+                        }
+                    }
+                },
                 scales: {
                     x: { 
-                        // CORREÇÃO 2: Mostrar as horas por baixo do gráfico
                         display: true, 
                         ticks: { 
                             color: '#555', 
                             font: { size: 9, family: 'JetBrains Mono' },
                             maxRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: 10 // Limita o número de horas visíveis para não sobrecarregar
+                            maxTicksLimit: 10 
                         }, 
                         grid: { display: false },
                         border: { color: 'rgba(255,255,255,0.1)' }
@@ -308,8 +322,8 @@
 
             if (charts[coin]) {
                 const c = charts[coin];
-                // Adiciona a hora atual formatada (HH:MM)
-                c.data.labels.push(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }));
+                // AQUI: Adicionado second: '2-digit' para as novas atualizações do Socket.io
+                c.data.labels.push(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
                 c.data.datasets[0].data.push(price);
                 if (c.data.labels.length > 60) { c.data.labels.shift(); c.data.datasets[0].data.shift(); }
                 c.update('none');
