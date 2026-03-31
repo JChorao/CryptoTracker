@@ -45,7 +45,7 @@ gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
 gh secret set AZURE_FUNC_NAME --body "$AZ_FUNC_NAME" --repo "$GH_REPO"
 
 echo "🤖 A relançar deploys automáticos..."
-sleep 5
+sleep 30
 gh run rerun $(gh run list --workflow=deploy.yml --limit 1 --json databaseId -q '.[0].databaseId') || true
 gh run rerun $(gh run list --workflow=deploy-function.yml --limit 1 --json databaseId -q '.[0].databaseId') || true
 

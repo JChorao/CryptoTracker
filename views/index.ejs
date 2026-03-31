@@ -150,7 +150,7 @@
                 <th>Preço (EUR)</th>
                 <th style="text-align:center">Tendência</th>
                 <th style="text-align:right">Detalhe</th>
-            </tr>
+            }
         </thead>
         <tbody>
             <% Object.keys(coinData).forEach((coin, i) => {
@@ -234,17 +234,22 @@
 
     function initChart(coin) {
         const ctx  = document.getElementById(`chart-${coin}`).getContext('2d');
-        const data = coinHistories[coin]; // Já vêm ordenados do app.js
+        const data = coinHistories[coin];
 
         charts[coin] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT')),
+                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })),
                 datasets: [{
                     data: data.map(d => d.price),
                     borderColor: '#f0b90b',
                     borderWidth: 2,
-                    pointRadius: 0,
+                    // CORREÇÃO 1: Ativar os pontos (bolas)
+                    pointRadius: 4, 
+                    pointBackgroundColor: '#f0b90b',
+                    pointBorderColor: '#000',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 6,
                     tension: 0.4,
                     fill: true,
                     backgroundColor: 'rgba(240,185,11,0.05)'
@@ -255,8 +260,25 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { display: false }, grid: { display: false } },
-                    y: { position: 'right', ticks: { color: '#555', font: { size: 9 } } }
+                    x: { 
+                        // CORREÇÃO 2: Mostrar as horas por baixo do gráfico
+                        display: true, 
+                        ticks: { 
+                            color: '#555', 
+                            font: { size: 9, family: 'JetBrains Mono' },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 10 // Limita o número de horas visíveis para não sobrecarregar
+                        }, 
+                        grid: { display: false },
+                        border: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    y: { 
+                        position: 'right', 
+                        ticks: { color: '#555', font: { size: 9 } },
+                        border: { display: false },
+                        grid: { color: 'rgba(255,255,255,0.03)' }
+                    }
                 }
             }
         });
@@ -271,6 +293,7 @@
             const priceEl = document.getElementById(`price-${coin}`);
             const trendEl = document.getElementById(`trend-${coin}`);
             const oldPrice = parseFloat(priceEl.getAttribute('data-raw') || 0);
+            const now = new Date();
 
             priceEl.textContent = price.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
             priceEl.setAttribute('data-raw', price);
@@ -285,7 +308,8 @@
 
             if (charts[coin]) {
                 const c = charts[coin];
-                c.data.labels.push(new Date().toLocaleTimeString('pt-PT'));
+                // Adiciona a hora atual formatada (HH:MM)
+                c.data.labels.push(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }));
                 c.data.datasets[0].data.push(price);
                 if (c.data.labels.length > 60) { c.data.labels.shift(); c.data.datasets[0].data.shift(); }
                 c.update('none');
