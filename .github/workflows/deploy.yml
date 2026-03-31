@@ -3,7 +3,7 @@ name: Deploy Web App
 on:
   push:
     branches:
-      - Production
+      - main
 
 jobs:
   build-and-deploy:
