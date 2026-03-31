@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = socketio(server);
 const PORT = process.env.PORT || 3000;
 
-// Configuração do Cosmos DB - As variáveis são injetadas pelo script azure.sh
+// Configuração do Cosmos DB
 const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
 const container = client.database(process.env.COSMOS_DB_NAME).container(process.env.COSMOS_CONTAINER_NAME);
 
@@ -18,18 +18,16 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rota principal: carrega o histórico de 60 minutos do Cosmos DB
+// Rota principal: carrega histórico do Cosmos DB
 app.get('/', async (req, res) => {
     try {
-        // Query para obter os registos mais recentes
         const { resources } = await container.items
             .query("SELECT TOP 60 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
             .fetchAll();
 
-        // Inicializa o objeto com as 4 moedas definidas
         let coinData = { bitcoin: [], ethereum: [], solana: [], cardano: [] };
         
-        // Processa os resultados (do mais antigo para o mais recente para o gráfico)
+        // Inverter para que o gráfico mostre do mais antigo para o mais recente (da esquerda para a direita)
         resources.reverse().forEach(item => {
             if (item.prices) {
                 Object.keys(item.prices).forEach(coin => {
@@ -43,19 +41,16 @@ app.get('/', async (req, res) => {
             }
         });
 
-        console.log(`📊 Renderizando página com ${resources.length} registos históricos.`);
         res.render('index', { coinData });
     } catch (err) {
         console.error("⚠️ Erro ao ler do Cosmos DB:", err.message);
-        // Em caso de erro (ex: contentor vazio), renderiza com dados vazios
         res.render('index', { coinData: { bitcoin: [], ethereum: [], solana: [], cardano: [] } });
     }
 });
 
-// Endpoint chamado pela Azure Function via POST
+// Endpoint de atualização em tempo real (chamado pela Azure Function)
 app.post('/api/update-prices', (req, res) => {
-    // A Function envia algo como: { bitcoin: { eur: 60000 }, ... }
-    // O frontend espera apenas: { bitcoin: 60000, ... }
+    // Extraímos apenas o valor numérico (eur) para enviar ao browser
     const simplifiedPrices = {};
     Object.keys(req.body).forEach(coin => {
         if (req.body[coin] && req.body[coin].eur) {
@@ -63,9 +58,9 @@ app.post('/api/update-prices', (req, res) => {
         }
     });
 
-    console.log('📥 Broadcast via Socket.io:', JSON.stringify(simplifiedPrices));
+    console.log('📥 Real-time update broadcast:', JSON.stringify(simplifiedPrices));
     io.emit('priceUpdate', simplifiedPrices); 
-    res.status(200).send('Preços atualizados em tempo real');
+    res.status(200).send('OK');
 });
 
-server.listen(PORT, () => console.log(`🚀 Servidor Web App a correr na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Servidor Web App (Node 24) na porta ${PORT}`));
