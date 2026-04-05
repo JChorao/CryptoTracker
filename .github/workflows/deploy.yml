@@ -1,9 +1,9 @@
-name: Deploy Web App
+name: Deploy Web App (Docker Mode)
 
 on:
   push:
     branches:
-      - main
+      - Production # Ajustado para a tua branch de produção
 
 jobs:
   build-and-deploy:
@@ -12,21 +12,29 @@ jobs:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: 📦 Instalar dependências
-        run: npm install
-
       - name: 🔐 Login na Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 🚀 Deploy para Azure App Service
+      - name: 🐳 Login no Azure Container Registry (ACR)
+        run: |
+          az acr login --name ${{ secrets.AZURE_ACR_NAME }}
+
+      - name: 🛠️ Build e Push da Imagem Docker
+        run: |
+          # Obter o servidor de login do ACR automaticamente
+          ACR_SERVER=$(az acr show --name ${{ secrets.AZURE_ACR_NAME }} --query loginServer -o tsv)
+          
+          # Construir a imagem usando o Dockerfile da raiz
+          docker build -t $ACR_SERVER/cryptotracker:latest .
+          
+          # Enviar para o registo na Azure
+          docker push $ACR_SERVER/cryptotracker:latest
+
+      - name: 🚀 Deploy para Azure App Service (Contentor)
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ secrets.AZURE_APP_NAME }}
-          package: .
+          # Especifica a imagem do ACR em vez do diretório local
+          images: '${{ secrets.AZURE_ACR_NAME }}.azurecr.io/cryptotracker:latest'
