@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const { CosmosClient } = require("@azure/cosmos");
-const { BlobServiceClient } = require("@azure/storage-blob"); // Novo
+const { BlobServiceClient } = require("@azure/storage-blob");
 const socketio = require('socket.io');
 
 const app = express();
@@ -10,7 +10,7 @@ const server = http.createServer(app);
 const io = socketio(server);
 const PORT = process.env.PORT || 3000;
 
-// Configurações vindas das App Settings da Azure
+// Configurações das App Settings da Azure
 const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
 const container = client.database(process.env.COSMOS_DB_NAME).container(process.env.COSMOS_CONTAINER_NAME);
 const blobConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -41,20 +41,20 @@ app.get('/', async (req, res) => {
     }
 });
 
-// NOVO: Endpoint para testar o Blob Storage diretamente na Azure
+// Endpoint para gerar e guardar relatório no Blob Storage
 app.get('/api/save-report', async (req, res) => {
     try {
-        if (!blobConnectionString) throw new Error("Connection String do Storage em falta!");
+        if (!blobConnectionString) throw new Error("AZURE_STORAGE_CONNECTION_STRING não configurada!");
 
         const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnectionString);
         const containerClient = blobServiceClient.getContainerClient("reports");
         
-        // Garante que o contentor existe
         await containerClient.createIfNotExists();
 
         const reportData = {
             data: new Date().toISOString(),
-            info: "Snapshot de teste CryptoTracker"
+            projeto: "CryptoTracker IPCB",
+            status: "Snapshot gerado via Docker Container"
         };
 
         const blobName = `relatorio-${Date.now()}.json`;
@@ -77,4 +77,4 @@ app.post('/api/update-prices', (req, res) => {
     res.status(200).send('OK');
 });
 
-server.listen(PORT, () => console.log(`🚀 Servidor na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Servidor Docker na porta ${PORT}`));

@@ -3,7 +3,7 @@ name: Deploy Web App (Docker Mode)
 on:
   push:
     branches:
-      - Production # Ajustado para a tua branch de produção
+      - Production 
 
 jobs:
   build-and-deploy:
@@ -23,18 +23,13 @@ jobs:
 
       - name: 🛠️ Build e Push da Imagem Docker
         run: |
-          # Obter o servidor de login do ACR automaticamente
-          ACR_SERVER=$(az acr show --name ${{ secrets.AZURE_ACR_NAME }} --query loginServer -o tsv)
-          
-          # Construir a imagem usando o Dockerfile da raiz
+          ACR_SERVER=${{ secrets.AZURE_ACR_NAME }}.azurecr.io
+          # Se o Dockerfile estiver numa subpasta, altera o '.' para o caminho da pasta
           docker build -t $ACR_SERVER/cryptotracker:latest .
-          
-          # Enviar para o registo na Azure
           docker push $ACR_SERVER/cryptotracker:latest
 
-      - name: 🚀 Deploy para Azure App Service (Contentor)
+      - name: 🚀 Deploy para Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ secrets.AZURE_APP_NAME }}
-          # Especifica a imagem do ACR em vez do diretório local
           images: '${{ secrets.AZURE_ACR_NAME }}.azurecr.io/cryptotracker:latest'
