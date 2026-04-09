@@ -10,7 +10,6 @@ const server = http.createServer(app);
 const io = socketio(server);
 const PORT = process.env.PORT || 3000;
 
-// Configurações das App Settings da Azure
 const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
 const container = client.database(process.env.COSMOS_DB_NAME).container(process.env.COSMOS_CONTAINER_NAME);
 const blobConnectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -41,25 +40,29 @@ app.get('/', async (req, res) => {
     }
 });
 
-// Endpoint para gerar e guardar relatório no Blob Storage
+// Endpoint chamado pelo botão da interface
 app.get('/api/save-report', async (req, res) => {
     try {
         if (!blobConnectionString) throw new Error("AZURE_STORAGE_CONNECTION_STRING não configurada!");
 
-        const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnectionString);
-        const containerClient = blobServiceClient.getContainerClient("reports");
-        
-        await containerClient.createIfNotExists();
+        const { resources } = await container.items
+            .query("SELECT * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
+            .fetchAll();
 
         const reportData = {
             data: new Date().toISOString(),
             projeto: "CryptoTracker IPCB",
-            status: "Snapshot gerado via Docker Container"
+            status: "Relatório gerado via Docker Processor",
+            historico: resources
         };
 
         const blobName = `relatorio-${Date.now()}.json`;
+        const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnectionString);
+        const containerClient = blobServiceClient.getContainerClient("reports");
+        await containerClient.createIfNotExists();
+        
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-        const serializedData = JSON.stringify(reportData);
+        const serializedData = JSON.stringify(reportData, null, 2);
 
         await blockBlobClient.upload(serializedData, serializedData.length);
         res.status(200).send({ message: "Sucesso!", ficheiro: blobName });
@@ -77,4 +80,4 @@ app.post('/api/update-prices', (req, res) => {
     res.status(200).send('OK');
 });
 
-server.listen(PORT, () => console.log(`🚀 Servidor Docker na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Servidor na porta ${PORT}`));

@@ -201,7 +201,10 @@
 
     <footer>
         <span class="footer-text">CryptoTracker © 2026 — João Oliveira · Tiago Pinheiro · Tiago Covas</span>
-        <span class="footer-text" id="update-counter">Atualizações: 0</span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button class="expand-btn" onclick="requestReport()" style="float:none; background:var(--gold-dim);">📊 GERAR RELATÓRIO</button>
+            <span class="footer-text" id="update-counter">Atualizações: 0</span>
+        </div>
     </footer>
 </div>
 
@@ -239,7 +242,6 @@
         charts[coin] = new Chart(ctx, {
             type: 'line',
             data: {
-                // AQUI: Adicionado second: '2-digit' para os dados iniciais do Cosmos DB
                 labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })),
                 datasets: [{
                     data: data.map(d => d.price),
@@ -261,7 +263,6 @@
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
-                        // Tooltip estilizada que agora vai herdar as horas, minutos e segundos automaticamente
                         backgroundColor: '#0d0d0d',
                         borderColor: 'rgba(240,185,11,0.3)',
                         borderWidth: 1,
@@ -277,13 +278,7 @@
                 scales: {
                     x: { 
                         display: true, 
-                        ticks: { 
-                            color: '#555', 
-                            font: { size: 9, family: 'JetBrains Mono' },
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 10 
-                        }, 
+                        ticks: { color: '#555', font: { size: 9, family: 'JetBrains Mono' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }, 
                         grid: { display: false },
                         border: { color: 'rgba(255,255,255,0.1)' }
                     },
@@ -322,7 +317,6 @@
 
             if (charts[coin]) {
                 const c = charts[coin];
-                // AQUI: Adicionado second: '2-digit' para as novas atualizações do Socket.io
                 c.data.labels.push(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
                 c.data.datasets[0].data.push(price);
                 if (c.data.labels.length > 60) { c.data.labels.shift(); c.data.datasets[0].data.shift(); }
@@ -337,7 +331,6 @@
         const buy = parseFloat(document.querySelector(`.buy-in[data-coin="${coin}"]`)?.value) || 0;
         const el  = document.getElementById(`profit-${coin}`);
         if (!el) return;
-
         if (qty > 0 && buy > 0) {
             const total = (currentPrice - buy) * qty;
             el.textContent = (total >= 0 ? '+' : '') + total.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
@@ -352,6 +345,27 @@
             updateProfit(coin, curPrice);
         }
     });
+
+    async function requestReport() {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = '⌛ A GERAR...';
+
+        try {
+            const response = await fetch('/api/save-report');
+            const result = await response.json();
+            if (response.ok) {
+                alert('Relatório guardado no Azure Blob Storage: ' + result.ficheiro);
+            } else {
+                alert('Erro: ' + result.error);
+            }
+        } catch (err) {
+            alert('Falha na comunicação com o servidor.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '📊 GERAR RELATÓRIO';
+        }
+    }
 </script>
 </body>
 </html>
