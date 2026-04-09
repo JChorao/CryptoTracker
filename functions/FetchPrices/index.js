@@ -1,7 +1,6 @@
 const axios = require('axios');
 const { CosmosClient } = require("@azure/cosmos");
 
-// Reutilização de instâncias para performance
 const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
 const container = client.database(process.env.COSMOS_DB_NAME).container(process.env.COSMOS_CONTAINER_NAME);
 
@@ -12,7 +11,6 @@ module.exports = async function (context, myTimer) {
     context.log('⚡ Iniciando recolha de preços...');
 
     try {
-        // 1. Procurar preços na CoinGecko
         const { data } = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
             params: { ids: coins.join(','), vs_currencies: 'eur' }
         });
@@ -25,11 +23,9 @@ module.exports = async function (context, myTimer) {
             prices: data
         };
 
-        // 2. Gravar no Cosmos DB
         await container.items.create(entry);
         context.log('✅ Dados guardados com sucesso no Cosmos DB.');
 
-        // 3. Notificar a Web App (para os WebSockets)
         try {
             await axios.post(updateUrl, data);
             context.log(`🚀 Web App notificada com sucesso em: ${updateUrl}`);

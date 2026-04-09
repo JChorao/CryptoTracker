@@ -16,7 +16,7 @@ GH_REPO="JChorao/CryptoTracker"
 
 export MSYS_NO_PATHCONV=1
 
-echo "📌 A iniciar criação da infraestrutura completa na Azure..."
+echo "📌 A iniciar criação da infraestrutura completa na Azure (Node 24)..."
 az group create --name "$AZ_RG" --location "$AZ_LOCATION"
 
 echo "1️⃣ Cosmos DB..."
@@ -33,7 +33,7 @@ az storage account create --name "$AZ_STORAGE_REPORTS" --location "$AZ_LOCATION"
 STORAGE_CONN=$(az storage account show-connection-string --name "$AZ_STORAGE_REPORTS" --resource-group "$AZ_RG" --query connectionString -o tsv)
 az storage account create --name "$AZ_STORAGE_FUNC" --location "$AZ_LOCATION" --resource-group "$AZ_RG" --sku Standard_LRS
 
-echo "4️⃣ Web App Service..."
+echo "4️⃣ Web App Service (Node 24)..."
 az appservice plan create --name "plan-crypto" --resource-group "$AZ_RG" --sku B1 --is-linux
 az webapp create --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --plan "plan-crypto" --runtime "NODE|24-lts"
 az webapp config set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --web-sockets-enabled true
@@ -43,8 +43,8 @@ az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG"
   COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" \
   AZURE_STORAGE_CONNECTION_STRING="$STORAGE_CONN"
 
-echo "5️⃣ Azure Function App..."
-az functionapp create --resource-group "$AZ_RG" --consumption-plan-location "$AZ_LOCATION" --runtime node --runtime-version 20 --functions-version 4 --name "$AZ_FUNC_NAME" --storage-account "$AZ_STORAGE_FUNC"
+echo "5️⃣ Azure Function App (Node 24)..."
+az functionapp create --resource-group "$AZ_RG" --consumption-plan-location "$AZ_LOCATION" --runtime node --runtime-version 24 --functions-version 4 --name "$AZ_FUNC_NAME" --storage-account "$AZ_STORAGE_FUNC"
 az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings \
   COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
   COSMOS_DB_NAME="$AZ_COSMOS_DB" \

@@ -40,7 +40,6 @@ app.get('/', async (req, res) => {
     }
 });
 
-// Endpoint chamado pelo botão da interface para o relatório
 app.get('/api/save-report', async (req, res) => {
     try {
         if (!blobConnectionString) throw new Error("AZURE_STORAGE_CONNECTION_STRING não configurada!");
@@ -71,7 +70,6 @@ app.get('/api/save-report', async (req, res) => {
     }
 });
 
-// Endpoint que recebe o POST da Azure Function
 app.post('/api/update-prices', (req, res) => {
     const simplifiedPrices = {};
     Object.keys(req.body).forEach(coin => {
