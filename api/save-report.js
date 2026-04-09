@@ -5,7 +5,7 @@ const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
 const container = client.database(process.env.COSMOS_DB_NAME).container(process.env.COSMOS_CONTAINER_NAME);
 
 async function run() {
-    console.log("Iniciando processamento Docker de relatórios...");
+    console.log("Iniciando processamento isolado via Docker...");
     try {
         const { resources } = await container.items
             .query("SELECT * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
@@ -20,9 +20,9 @@ async function run() {
         const data = JSON.stringify(resources, null, 2);
 
         await blockBlobClient.upload(data, data.length);
-        console.log("Relatório finalizado e enviado: " + blobName);
+        console.log("✅ Relatório finalizado e enviado para o Blob Storage: " + blobName);
     } catch (err) {
-        console.error("Erro no processamento Docker:", err.message);
+        console.error("❌ Erro no processamento Docker:", err.message);
         process.exit(1);
     }
 }

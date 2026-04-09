@@ -1,13 +1,13 @@
 {
   "name": "cryptotracker-functions",
   "version": "1.0.0",
-  "description": "Azure Functions para o CryptoTracker - Node 24",
+  "description": "Azure Functions para o CryptoTracker - Node 20 LTS",
   "main": "FetchPrices/index.js",
   "scripts": {
     "start": "func start"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "@azure/cosmos": "^4.2.0",
