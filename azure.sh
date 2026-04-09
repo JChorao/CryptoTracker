@@ -63,11 +63,17 @@ az functionapp create --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" \
     --runtime node --runtime-version 24 --functions-version 4 --os-type Windows
 
 echo "📌 A configurar Variáveis de Ambiente..."
-az webapp config appsettings set --name "$AZ_APP_NAME" --resource-group "$AZ_RG" --settings \
-    COSMOS_CONNECTION_STRING="$COSMOS_CONN" COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" > /dev/null
+az webapp config appsettings set --name "$AZ_APP_NAME" \
+--resource-group "$AZ_RG" --settings \
+    COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
+    COSMOS_DB_NAME="$AZ_COSMOS_DB" \
+    COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" > /dev/null
 
-az functionapp config appsettings set --name "$AZ_FUNC_NAME" --resource-group "$AZ_RG" --settings \
-    COSMOS_CONNECTION_STRING="$COSMOS_CONN" COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" APP_SERVICE_URL="$APP_URL" > /dev/null
+az functionapp config appsettings set --name "$AZ_FUNC_NAME"\
+ --resource-group "$AZ_RG" --settings \
+    COSMOS_CONNECTION_STRING="$COSMOS_CONN" \
+    COSMOS_DB_NAME="$AZ_COSMOS_DB" COSMOS_CONTAINER_NAME="$AZ_COSMOS_CONTAINER" \
+    APP_SERVICE_URL="$APP_URL" > /dev/null
 
 echo "📌 🔐 A gerar Identidade Segura (Service Principal Token)..."
 # TRUQUE DE MESTRE: Buscar o Scope exato diretamente à Azure para evitar o bug do Git Bash
