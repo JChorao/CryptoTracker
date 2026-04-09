@@ -60,4 +60,26 @@ gh secret set AZURE_APP_NAME --body "$AZ_APP_NAME" --repo "$GH_REPO"
 gh secret set AZURE_FUNC_NAME --body "$AZ_FUNC_NAME" --repo "$GH_REPO"
 gh secret set AZURE_ACR_NAME --body "$AZ_ACR_NAME" --repo "$GH_REPO"
 
-echo "✅ Infraestrutura concluída com sucesso!"
+echo "7️⃣ A acionar o Re-run Automático no GitHub Actions..."
+# Pequena pausa para garantir que os secrets foram guardados no GitHub
+sleep 30
+
+# Procura o ID do último run do workflow principal e faz rerun
+LATEST_APP_RUN=$(gh run list --repo "$GH_REPO" --workflow "deploy.yml" --limit 1 --json databaseId --jq '.[0].databaseId')
+if [ -n "$LATEST_APP_RUN" ]; then
+    gh run rerun "$LATEST_APP_RUN" --repo "$GH_REPO"
+    echo "🚀 Re-run acionado para a Web App e Docker (Run ID: $LATEST_APP_RUN)."
+else
+    echo "⚠️ Nenhum histórico encontrado para o deploy da Web App."
+fi
+
+# Procura o ID do último run do workflow da Function e faz rerun
+LATEST_FUNC_RUN=$(gh run list --repo "$GH_REPO" --workflow "deploy-function.yml" --limit 1 --json databaseId --jq '.[0].databaseId')
+if [ -n "$LATEST_FUNC_RUN" ]; then
+    gh run rerun "$LATEST_FUNC_RUN" --repo "$GH_REPO"
+    echo "🚀 Re-run acionado para a Azure Function (Run ID: $LATEST_FUNC_RUN)."
+else
+    echo "⚠️ Nenhum histórico encontrado para o deploy da Function."
+fi
+
+echo "✅ Script concluído! Podes ir ao separador Actions no GitHub para ver os deploys a correr com a nova infraestrutura."
