@@ -202,7 +202,7 @@
     <footer>
         <span class="footer-text">CryptoTracker © 2026 — João Oliveira · Tiago Pinheiro · Tiago Covas</span>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <button class="expand-btn" onclick="requestReport()" style="float:none; background:var(--gold-dim);">📊 GERAR RELATÓRIO PDF</button>
+            <button class="expand-btn" onclick="requestReport(this)" style="float:none; background:var(--gold-dim);">📊 GERAR RELATÓRIO PDF</button>
             <span class="footer-text" id="update-counter">Atualizações: 0</span>
         </div>
     </footer>
@@ -352,9 +352,8 @@
         }
     });
 
-    // NOVO: Pedir o relatório e descarregar automaticamente o PDF gerado
-    async function requestReport() {
-        const btn = event.target;
+    // RECEBER O BOTÃO COMO PARÂMETRO
+    async function requestReport(btn) {
         btn.disabled = true;
         btn.textContent = '⌛ A GERAR PDF...';
 
@@ -362,11 +361,9 @@
             const response = await fetch('/api/download-report');
             
             if (response.ok) {
-                // Converter a stream da resposta num Blob de PDF
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 
-                // Forçar o browser a abrir/iniciar o download do ficheiro
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
@@ -380,7 +377,8 @@
                 alert('Erro: ' + result.error);
             }
         } catch (err) {
-            alert('Falha na comunicação com o servidor.');
+            console.error("Erro no fetch do relatório:", err);
+            alert('Falha na comunicação com o servidor. Vê a consola para mais detalhes.');
         } finally {
             btn.disabled = false;
             btn.textContent = '📊 GERAR RELATÓRIO PDF';
