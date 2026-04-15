@@ -73,7 +73,7 @@
 
         .clock { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.08em; }
 
-        .crypto-table { width: 100%; border-collapse: collapse; }
+        .crypto-table { width: 100%; border-collapse: collapse; margin-bottom: 60px; }
         .crypto-table thead th { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); padding: 0 16px 16px; border-bottom: 1px solid var(--border); font-weight: 400; }
         .crypto-table thead th:last-child { text-align: right; }
         .crypto-table thead th:nth-child(3) { text-align: center; }
@@ -96,6 +96,19 @@
 
         .expand-btn { background: transparent; border: 1px solid var(--border); color: var(--gold); font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 14px; border-radius: 4px; cursor: pointer; transition: all 0.2s; float: right; }
         .expand-btn:hover, .coin-row.active .expand-btn { background: var(--gold); color: #000; border-color: var(--gold); }
+
+        /* Estilos da Secção de Relatórios (Dashboard Inferior) */
+        .reports-dashboard { margin-top: 40px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+        .dashboard-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.1em; color: var(--gold); text-transform: uppercase; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        .report-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .report-item { background: var(--bg3); border: 1px solid var(--border); padding: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; transition: transform 0.2s; }
+        .report-item:hover { transform: translateY(-2px); border-color: var(--gold-dim); }
+        .report-info { display: flex; flex-direction: column; gap: 4px; }
+        .report-name { font-size: 0.75rem; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+        .report-date { font-size: 0.6rem; color: var(--text-muted); }
+        .download-link { background: var(--gold-dim); color: var(--gold); font-size: 0.6rem; text-decoration: none; padding: 6px 12px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; transition: 0.2s; }
+        .download-link:hover { background: var(--gold); color: #000; }
+        .empty-state { font-size: 0.7rem; color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px; }
 
         .detail-row td { padding: 0; border: none; }
         .detail-panel { display: none; background: var(--bg3); border-bottom: 1px solid var(--border); overflow: hidden; }
@@ -199,6 +212,25 @@
         </tbody>
     </table>
 
+    <div class="reports-dashboard">
+        <div class="dashboard-title">📂 Histórico de Relatórios Gerados</div>
+        <ul class="report-list" id="listaRelatorios">
+            <% if (typeof reports !== 'undefined' && reports.length > 0) { %>
+                <% reports.forEach(function(report) { %>
+                    <li class="report-item">
+                        <div class="report-info">
+                            <span class="report-name"><%= report %></span>
+                            <span class="report-date">Azure Blob Storage</span>
+                        </div>
+                        <a href="/api/download/<%= report %>" class="download-link" target="_blank">Download</a>
+                    </li>
+                <% }); %>
+            <% } else { %>
+                <li class="empty-state">Ainda não existem relatórios disponíveis para download.</li>
+            <% } %>
+        </ul>
+    </div>
+
     <footer>
         <span class="footer-text">CryptoTracker © 2026 — João Oliveira · Tiago Pinheiro · Tiago Covas</span>
         <div style="display: flex; align-items: center; gap: 15px;">
@@ -226,7 +258,6 @@
         document.querySelectorAll('.detail-panel.open').forEach(p => p.classList.remove('open'));
         document.querySelectorAll('.coin-row.active').forEach(r => r.classList.remove('active'));
         
-        // BUG FIX: Restringir a redefinição de texto APENAS aos botões dentro da tabela (.crypto-table)
         document.querySelectorAll('.crypto-table .expand-btn').forEach(b => b.textContent = '+ VER');
 
         if (!isOpen) {
@@ -352,33 +383,39 @@
         }
     });
 
-    // RECEBER O BOTÃO COMO PARÂMETRO
+    // Função para pedir a geração do relatório e atualizar a lista
     async function requestReport(btn) {
         btn.disabled = true;
         btn.textContent = '⌛ A GERAR PDF...';
 
         try {
-            const response = await fetch('/api/download-report');
+            // Chamada ao endpoint que gera e guarda no storage
+            const response = await fetch('/api/generate-report', { method: 'POST' });
+            const result = await response.json();
             
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `CryptoTracker_Relatorio_${Date.now()}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                
-                window.URL.revokeObjectURL(url);
+            if (result.success) {
+                // Atualizar a lista de relatórios visualmente sem refresh
+                const lista = document.getElementById('listaRelatorios');
+                const emptyState = lista.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+
+                const newItem = document.createElement('li');
+                newItem.className = 'report-item';
+                newItem.innerHTML = `
+                    <div class="report-info">
+                        <span class="report-name">${result.filename}</span>
+                        <span class="report-date">Azure Blob Storage</span>
+                    </div>
+                    <a href="/api/download/${result.filename}" class="download-link" target="_blank">Download</a>
+                `;
+                lista.prepend(newItem);
+                alert('Relatório gerado com sucesso e guardado na nuvem!');
             } else {
-                const result = await response.json();
-                alert('Erro: ' + result.error);
+                alert('Erro ao gerar relatório: ' + result.error);
             }
         } catch (err) {
             console.error("Erro no fetch do relatório:", err);
-            alert('Falha na comunicação com o servidor. Vê a consola para mais detalhes.');
+            alert('Falha na comunicação com o servidor.');
         } finally {
             btn.disabled = false;
             btn.textContent = '📊 GERAR RELATÓRIO PDF';
