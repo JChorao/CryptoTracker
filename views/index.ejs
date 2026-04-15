@@ -9,106 +9,32 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root {
-            --gold: #f0b90b;
-            --gold-dim: rgba(240,185,11,0.12);
-            --gold-glow: rgba(240,185,11,0.25);
-            --green: #0ecb81;
-            --red: #f6465d;
-            --bg: #000000;
-            --bg2: #080808;
-            --bg3: #0d0d0d;
-            --border: rgba(255,255,255,0.08);
-            --text-muted: #555;
-            --text-dim: #999;
-        }
-
+        :root { --gold: #f0b90b; --gold-dim: rgba(240,185,11,0.12); --gold-glow: rgba(240,185,11,0.25); --green: #0ecb81; --red: #f6465d; --bg: #000000; --bg2: #080808; --bg3: #0d0d0d; --border: rgba(255,255,255,0.08); --text-muted: #555; --text-dim: #999; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background: var(--bg);
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(240,185,11,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(240,185,11,0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .wrapper {
-            position: relative;
-            z-index: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 60px 24px;
-        }
-
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 60px;
-            padding-bottom: 30px;
-            border-bottom: 1px solid var(--border);
-        }
-
+        body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(240,185,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,185,11,0.03) 1px, transparent 1px); background-size: 50px 50px; pointer-events: none; z-index: 0; }
+        .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 60px 24px; }
+        header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 60px; padding-bottom: 30px; border-bottom: 1px solid var(--border); }
         .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; letter-spacing: -0.04em; line-height: 1; }
         .logo span { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
-
-        .live-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 0.7rem; letter-spacing: 0.2em; color: var(--green); text-transform: uppercase; border: 1px solid rgba(14,203,129,0.2); padding: 6px 14px; border-radius: 50px; background: rgba(14,203,129,0.05); }
-        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 2s infinite; }
-
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
-
-        .crypto-table { width: 100%; border-collapse: separate; border-spacing: 0 12px; margin-bottom: 60px; }
-        .crypto-table thead th { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); padding: 10px 20px; font-weight: 500; }
-        
-        .coin-row { background: var(--bg2); border: 1px solid var(--border); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
-        .coin-row:hover { background: var(--bg3); border-color: var(--gold-dim); transform: scale(1.01); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .coin-row.active { border-color: var(--gold); background: var(--gold-dim); }
-        .coin-row td { padding: 25px 20px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-        .coin-row td:first-child { border-left: 1px solid var(--border); border-radius: 12px 0 0 12px; }
-        .coin-row td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12px 0; }
-
-        .coin-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fff; text-transform: uppercase; }
+        .live-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 0.7rem; color: var(--green); text-transform: uppercase; border: 1px solid rgba(14,203,129,0.2); padding: 6px 14px; border-radius: 50px; background: rgba(14,203,129,0.05); }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .crypto-table { width: 100%; border-collapse: separate; border-spacing: 0 12px; }
+        .coin-row { background: var(--bg2); cursor: pointer; transition: 0.3s; }
+        .coin-row:hover { background: var(--bg3); border-color: var(--gold-dim); transform: scale(1.01); }
         .price-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.3rem; color: var(--gold); }
-
-        .detail-panel { background: var(--bg3); border-radius: 12px; margin: -5px 0 20px 0; overflow: hidden; border: 1px solid var(--border); }
-        .detail-inner { display: grid; grid-template-columns: 300px 1fr; gap: 0; }
+        .detail-panel { background: var(--bg3); border-radius: 12px; margin-top: -5px; border: 1px solid var(--border); overflow: hidden; }
+        .detail-inner { display: grid; grid-template-columns: 300px 1fr; }
         .calc-side { padding: 30px; border-right: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-        .chart-side { padding: 30px; }
-
-        .calc-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; margin-bottom: 15px; font-family: 'JetBrains Mono'; }
-        .calc-input:focus { outline: none; border-color: var(--gold); }
+        .calc-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; margin-bottom: 15px; }
         .profit-amount { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700; }
-        .pos { color: var(--green); }
-        .neg { color: var(--red); }
-
+        .pos { color: var(--green); } .neg { color: var(--red); }
         .reports-dashboard { margin-top: 80px; padding: 40px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); border: 1px solid var(--border); border-radius: 20px; }
-        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
-        .dashboard-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fff; text-transform: uppercase; letter-spacing: 0.1em; }
-        
-        .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 25px; }
         .report-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; }
-        
-        .btn-action { background: var(--gold); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: 0.3s; cursor: pointer; }
-        .btn-action:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--gold-glow); }
-
-        .btn-download { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border); font-size: 0.65rem; padding: 8px 15px; border-radius: 6px; text-decoration: none; transition: 0.2s; }
-        .btn-download:hover { background: var(--gold-dim); color: var(--gold); border-color: var(--gold); }
-
-        footer { margin-top: 80px; padding: 40px 0; border-top: 1px solid var(--border); text-align: center; }
-        .footer-text { font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.2em; }
+        .btn-action { background: var(--gold); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; text-transform: uppercase; cursor: pointer; }
+        .btn-download { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border); font-size: 0.65rem; padding: 8px 15px; border-radius: 6px; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -116,90 +42,59 @@
 <div class="wrapper">
     <header>
         <div class="logo">CRYPTO<span>TRACKER</span></div>
-        <div class="header-right" style="display:flex; align-items:center; gap:30px;">
-            <div id="clock" style="font-size:0.8rem; color:var(--text-dim); letter-spacing:0.1em;">00:00:00</div>
+        <div style="display:flex; align-items:center; gap:30px;">
+            <div id="clock" style="font-size:0.8rem; color:var(--text-dim);">00:00:00</div>
             <div class="live-badge"><span class="live-dot"></span> System Live</div>
         </div>
     </header>
 
     <table class="crypto-table">
-        <thead>
-            <tr>
-                <th>Asset</th>
-                <th>Price Index</th>
-                <th style="text-align:center">Performance</th>
-                <th style="text-align:right">Details</th>
-            </tr>
-        </thead>
+        <thead><tr><th>Moeda</th><th>Preço Index</th><th style="text-align:center">Performance</th><th style="text-align:right">Ações</th></tr></thead>
         <tbody>
             <% if (typeof coinData !== 'undefined') { %>
-                <% Object.keys(coinData).forEach((coin, i) => {
+                <% Object.keys(coinData).forEach((coin) => {
                     const cur = coinData[coin][coinData[coin].length - 1]?.price || 0;
                 %>
-                <tr class="coin-row" id="row-<%= coin %>" onclick="toggleDetail('<%= coin %>')">
-                    <td>
-                        <div class="coin-name"><%= coin %></div>
-                        <div style="font-size:0.6rem; color:var(--text-muted);">COINGECKO / EUR</div>
-                    </td>
+                <tr class="coin-row" onclick="toggleDetail('<%= coin %>')">
+                    <td><div style="font-weight:700; font-family:'Syne';"><%= coin.toUpperCase() %></div><div style="font-size:0.6rem; color:var(--text-muted);">COINGECKO / EUR</div></td>
                     <td><span class="price-val" id="price-<%= coin %>" data-raw="<%= cur %>"><%= cur.toLocaleString('pt-PT', {minimumFractionDigits:2}) %>€</span></td>
-                    <td style="text-align:center"><span id="trend-<%= coin %>" style="font-size:0.8rem; color:var(--text-dim);">—</span></td>
-                    <td style="text-align:right"><button class="btn-download" id="expand-btn-<%= coin %>">+ VIEW</button></td>
+                    <td style="text-align:center"><span id="trend-<%= coin %>">—</span></td>
+                    <td style="text-align:right"><button class="btn-download">+ VER</button></td>
                 </tr>
-                <tr id="detail-row-<%= coin %>" style="display:none;">
-                    <td colspan="4">
-                        <div class="detail-panel">
-                            <div class="detail-inner">
-                                <div class="calc-side">
-                                    <div style="font-size:0.6rem; color:var(--gold); margin-bottom:15px; letter-spacing:0.1em;">PROFIT CALCULATOR</div>
-                                    <input type="number" class="calc-input qty-in" data-coin="<%= coin %>" placeholder="Quantity">
-                                    <input type="number" class="calc-input buy-in" data-coin="<%= coin %>" placeholder="Buy Price (€)">
-                                    <div style="font-size:0.6rem; color:var(--text-dim); margin-top:10px;">ESTIMATED P/L</div>
-                                    <div class="profit-amount" id="profit-<%= coin %>">0.00€</div>
-                                </div>
-                                <div class="chart-side">
-                                    <div style="height:250px;"><canvas id="chart-<%= coin %>"></canvas></div>
-                                </div>
+                <tr id="detail-row-<%= coin %>" style="display:none;"><td colspan="4">
+                    <div class="detail-panel">
+                        <div class="detail-inner">
+                            <div class="calc-side">
+                                <div style="font-size:0.6rem; color:var(--gold); margin-bottom:15px;">CALCULADORA DE LUCRO</div>
+                                <input type="number" class="calc-input qty-in" data-coin="<%= coin %>" placeholder="Quantidade">
+                                <input type="number" class="calc-input buy-in" data-coin="<%= coin %>" placeholder="Preço Compra (€)">
+                                <div class="profit-amount" id="profit-<%= coin %>">0.00€</div>
                             </div>
+                            <div style="padding:30px;"><div style="height:250px;"><canvas id="chart-<%= coin %>"></canvas></div></div>
                         </div>
-                    </td>
-                </tr>
+                    </div>
+                </td></tr>
                 <% }); %>
             <% } %>
         </tbody>
     </table>
 
     <div class="reports-dashboard">
-        <div class="dashboard-header">
-            <div class="dashboard-title">Vault / Generated Reports</div>
-            <button class="btn-action" onclick="requestReport(this)">
-                <span>Generate New Audit</span>
-            </button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-family:'Syne'; font-weight:800;">VAULT / RELATÓRIOS</div>
+            <button class="btn-action" onclick="requestReport(this)">Gerar Auditoria</button>
         </div>
-        
         <div class="report-grid" id="listaRelatorios">
             <% if (typeof reports !== 'undefined' && reports.length > 0) { %>
                 <% reports.forEach(function(report) { %>
                     <div class="report-item">
-                        <div style="display:flex; align-items:center;">
-                            <div style="background:var(--gold-dim); padding:10px; border-radius:8px; color:var(--gold); margin-right:15px; font-weight:800; font-size:0.7rem;">PDF</div>
-                            <div class="report-info">
-                                <span class="report-name"><%= report %></span>
-                                <span style="font-size:0.6rem; color:var(--text-muted);">Secured / Azure Storage</span>
-                            </div>
-                        </div>
+                        <div><div style="font-size:0.8rem; font-weight:600;"><%= report %></div><div style="font-size:0.6rem; color:var(--text-muted);">Azure Storage / PDF</div></div>
                         <a href="/api/download/<%= report %>" class="btn-download" target="_blank">Download</a>
                     </div>
                 <% }); %>
-            <% } else { %>
-                <div class="empty-state" style="grid-column: 1/-1; text-align:center; color:var(--text-dim); padding:40px;">No audit logs found in the vault.</div>
-            <% } %>
+            <% } else { %><div style="color:var(--text-dim); padding:20px;">Nenhum relatório encontrado.</div><% } %>
         </div>
     </div>
-
-    <footer>
-        <div class="footer-text">IPCB CLOUD COMPUTING / 2026 EDITION</div>
-        <div style="margin-top:10px; font-size:0.55rem; color:var(--text-muted);">JOÃO OLIVEIRA • TIAGO PINHEIRO • TIAGO COVAS</div>
-    </footer>
 </div>
 
 <script>
@@ -212,19 +107,11 @@
 
     function toggleDetail(coin) {
         const row = document.getElementById(`detail-row-${coin}`);
-        const coinRow = document.getElementById(`row-${coin}`);
-        const btn = document.getElementById(`expand-btn-${coin}`);
         const isVisible = row.style.display !== 'none';
-        
+        document.querySelectorAll('[id^="detail-row-"]').forEach(r => r.style.display = 'none');
         if (!isVisible) {
             row.style.display = 'table-row';
-            coinRow.classList.add('active');
-            btn.textContent = '- HIDE';
             if (!charts[coin]) initChart(coin);
-        } else {
-            row.style.display = 'none';
-            coinRow.classList.remove('active');
-            btn.textContent = '+ VIEW';
         }
     }
 
@@ -236,60 +123,32 @@
             data: {
                 labels: data.map(d => new Date(d.timestamp).toLocaleTimeString()),
                 datasets: [{ 
-                    data: data.map(d => d.price), 
-                    borderColor: '#f0b90b', 
-                    borderWidth: 2,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#f0b90b',
-                    pointHoverRadius: 7,
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: 'rgba(240,185,11,0.05)'
+                    data: data.map(d => d.price), borderColor: '#f0b90b', borderWidth: 2,
+                    pointRadius: 4, pointHoverRadius: 7, pointBackgroundColor: '#f0b90b', tension: 0.4, fill: true, backgroundColor: 'rgba(240,185,11,0.05)'
                 }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
-                scales: { 
-                    x: { display: true, grid: { display: false }, ticks: { color: '#444' } }, 
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666' } } 
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     }
 
     async function requestReport(btn) {
-        const originalText = btn.innerHTML;
-        btn.disabled = true; 
-        btn.innerHTML = "<span>Processing...</span>";
-        
+        btn.disabled = true; btn.textContent = "A Processar...";
         try {
             const res = await fetch('/api/generate-report', { method: 'POST' });
             const result = await res.json();
-            
-            if (result.success) {
-                location.reload(); // Refresh to update list
-            } else {
-                alert("Server Error: " + (result.error || "Unknown"));
-            }
-        } catch (err) {
-            alert("Network Error: Could not reach the server.");
-        } finally {
-            btn.disabled = false; 
-            btn.innerHTML = originalText;
-        }
+            if (result.success) location.reload();
+            else alert("Erro no Servidor: " + result.error);
+        } catch (err) { alert("Erro na comunicação."); }
+        finally { btn.disabled = false; btn.textContent = "Gerar Auditoria"; }
     }
 
-    // Calculadora de Lucro
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('qty-in') || e.target.classList.contains('buy-in')) {
             const coin = e.target.dataset.coin;
             const qty = parseFloat(document.querySelector(`.qty-in[data-coin="${coin}"]`).value) || 0;
-            const buyPrice = parseFloat(document.querySelector(`.buy-in[data-coin="${coin}"]`).value) || 0;
-            const currentPrice = parseFloat(document.getElementById(`price-${coin}`).getAttribute('data-raw'));
-            
-            const profit = (currentPrice - buyPrice) * qty;
+            const buy = parseFloat(document.querySelector(`.buy-in[data-coin="${coin}"]`).value) || 0;
+            const current = parseFloat(document.getElementById(`price-${coin}`).getAttribute('data-raw'));
+            const profit = (current - buy) * qty;
             const display = document.getElementById(`profit-${coin}`);
             display.textContent = profit.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
             display.className = 'profit-amount ' + (profit >= 0 ? 'pos' : 'neg');
@@ -300,28 +159,13 @@
         Object.keys(newPrices).forEach(coin => {
             const el = document.getElementById(`price-${coin}`);
             if (el) {
-                const oldPrice = parseFloat(el.getAttribute('data-raw') || 0);
+                const old = parseFloat(el.getAttribute('data-raw') || 0);
                 const price = newPrices[coin];
                 el.textContent = price.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
                 el.setAttribute('data-raw', price);
-                
                 const trend = document.getElementById(`trend-${coin}`);
-                if (price > oldPrice) {
-                    trend.textContent = '▲'; trend.style.color = 'var(--green)';
-                } else if (price < oldPrice) {
-                    trend.textContent = '▼'; trend.style.color = 'var(--red)';
-                }
-
-                if (charts[coin]) {
-                    const now = new Date().toLocaleTimeString();
-                    charts[coin].data.labels.push(now);
-                    charts[coin].data.datasets[0].data.push(price);
-                    if (charts[coin].data.labels.length > 20) {
-                        charts[coin].data.labels.shift();
-                        charts[coin].data.datasets[0].data.shift();
-                    }
-                    charts[coin].update('none');
-                }
+                if (price > old) { trend.textContent = '▲'; trend.style.color = 'var(--green)'; }
+                else if (price < old) { trend.textContent = '▼'; trend.style.color = 'var(--red)'; }
             }
         });
     });
