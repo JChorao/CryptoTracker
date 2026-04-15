@@ -67,7 +67,6 @@ app.get('/', async (req, res) => {
     res.render('index', { coinData, reports: reports.reverse() });
 });
 
-// Endpoint para gerar e guardar PDF no Storage
 app.post('/api/generate-report', async (req, res) => {
     try {
         const { resources } = await container.items

@@ -33,7 +33,6 @@
             overflow-x: hidden;
         }
 
-        /* Fundo com Grelha Animada */
         body::before {
             content: '';
             position: fixed;
@@ -71,7 +70,6 @@
 
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
 
-        /* Tabela Estilizada */
         .crypto-table { width: 100%; border-collapse: separate; border-spacing: 0 12px; margin-bottom: 60px; }
         .crypto-table thead th { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); padding: 10px 20px; font-weight: 500; }
         
@@ -84,14 +82,12 @@
         .coin-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fff; }
         .price-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.3rem; color: var(--gold); }
 
-        /* Dashboard de Relatórios */
         .reports-dashboard { margin-top: 80px; padding: 40px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
         .dashboard-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fff; text-transform: uppercase; letter-spacing: 0.1em; }
         
         .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
         .report-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; transition: 0.3s; }
-        .report-item:hover { background: rgba(240,185,11,0.03); border-color: var(--gold-dim); }
         
         .report-icon { width: 40px; height: 40px; background: var(--gold-dim); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.2rem; margin-right: 15px; }
         .report-info { flex: 1; min-width: 0; }
@@ -100,7 +96,6 @@
 
         .btn-action { background: var(--gold); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: 0.3s; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
         .btn-action:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--gold-glow); }
-        .btn-action:disabled { background: var(--text-muted); cursor: not-allowed; }
 
         .btn-download { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border); font-size: 0.65rem; padding: 8px 15px; border-radius: 6px; text-decoration: none; transition: 0.2s; }
         .btn-download:hover { background: var(--gold-dim); color: var(--gold); border-color: var(--gold); }
@@ -130,7 +125,7 @@
             </tr>
         </thead>
         <tbody>
-            <% if (coinData) { %>
+            <% if (typeof coinData !== 'undefined') { %>
                 <% Object.keys(coinData).forEach((coin, i) => {
                     const cur = coinData[coin][coinData[coin].length - 1]?.price || 0;
                 %>
@@ -214,7 +209,12 @@
                     data: data.map(d => d.price), 
                     borderColor: '#f0b90b', 
                     borderWidth: 2,
-                    pointRadius: 0,
+                    // ATIVAÇÃO DOS PONTOS PARA MAIOR PRECISÃO
+                    pointRadius: 4,
+                    pointBackgroundColor: '#f0b90b',
+                    pointBorderColor: '#000',
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 7,
                     tension: 0.4,
                     fill: true,
                     backgroundColor: 'rgba(240,185,11,0.05)'
