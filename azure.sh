@@ -62,7 +62,7 @@ gh secret set AZURE_ACR_NAME --body "$AZ_ACR_NAME" --repo "$GH_REPO"
 
 echo "7️⃣ A acionar o Re-run Automático no GitHub Actions..."
 # Pequena pausa para garantir que os secrets foram guardados no GitHub
-sleep 30
+sleep 120
 
 # Procura o ID do último run do workflow principal e faz rerun
 LATEST_APP_RUN=$(gh run list --repo "$GH_REPO" --workflow "deploy.yml" --limit 1 --json databaseId --jq '.[0].databaseId')

@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY package*.json ./
 RUN npm install --production
+
 COPY . .
 
 CMD ["node", "api/save-report.js"]
