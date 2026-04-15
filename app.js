@@ -11,7 +11,7 @@ const server = http.createServer(app);
 const io = socketio(server);
 const PORT = process.env.PORT || 3000;
 
-// Configuração Azure - Fallback para evitar erros se as vars não existirem
+// Configurações de Clientes Azure
 const cosmosConn = process.env.COSMOS_CONNECTION_STRING;
 const storageConn = process.env.AZURE_STORAGE_CONNECTION_STRING;
 
@@ -38,7 +38,6 @@ app.get('/', async (req, res) => {
     let reports = [];
 
     try {
-        // 1. Tentar obter preços do Cosmos DB
         if (container) {
             const { resources } = await container.items
                 .query("SELECT TOP 60 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
@@ -55,7 +54,6 @@ app.get('/', async (req, res) => {
             });
         }
 
-        // 2. Tentar listar relatórios do Blob Storage
         if (containerClient) {
             await containerClient.createIfNotExists({ access: 'blob' });
             for await (const blob of containerClient.listBlobsFlat()) {
@@ -63,17 +61,15 @@ app.get('/', async (req, res) => {
             }
         }
     } catch (err) {
-        console.error("Erro ao carregar dados iniciais:", err.message);
+        console.error("Erro ao carregar dados:", err.message);
     }
 
-    // SEMPRE renderizar com coinData definido, mesmo que vazio
     res.render('index', { coinData, reports: reports.reverse() });
 });
 
+// Endpoint para gerar e guardar PDF no Storage
 app.post('/api/generate-report', async (req, res) => {
     try {
-        if (!container || !containerClient) throw new Error("Serviços Azure não configurados.");
-
         const { resources } = await container.items
             .query("SELECT TOP 50 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
             .fetchAll();
@@ -92,11 +88,10 @@ app.post('/api/generate-report', async (req, res) => {
             res.json({ success: true, filename });
         });
 
-        doc.fontSize(25).fillColor('#f0b90b').text('CryptoTracker IPCB', { align: 'center' });
-        doc.fontSize(12).fillColor('#000').text(`Gerado em: ${new Date().toLocaleString('pt-PT')}`, { align: 'center' });
+        doc.fontSize(24).fillColor('#f0b90b').text('CryptoTracker IPCB', { align: 'center' });
         doc.moveDown();
         resources.forEach(item => {
-            doc.text(`Data: ${item.timestamp} | BTC: ${item.prices?.bitcoin?.eur}€`);
+            doc.fontSize(10).fillColor('#000').text(`Data: ${item.timestamp} | BTC: ${item.prices?.bitcoin?.eur}€`);
         });
         doc.end();
     } catch (err) {
