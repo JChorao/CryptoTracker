@@ -209,12 +209,9 @@
                     data: data.map(d => d.price), 
                     borderColor: '#f0b90b', 
                     borderWidth: 2,
-                    // ATIVAÇÃO DOS PONTOS PARA MAIOR PRECISÃO
-                    pointRadius: 4,
+                    pointRadius: 4, // PONTOS ADICIONADOS
                     pointBackgroundColor: '#f0b90b',
-                    pointBorderColor: '#000',
-                    pointBorderWidth: 1,
-                    pointHoverRadius: 7,
+                    pointHoverRadius: 6,
                     tension: 0.4,
                     fill: true,
                     backgroundColor: 'rgba(240,185,11,0.05)'
@@ -234,15 +231,15 @@
 
     async function requestReport(btn) {
         const originalText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = "<span>Processing Audit...</span>";
+        btn.disabled = true; 
+        btn.innerHTML = "<span>Processing Audit...</span>";
+        
         try {
             const res = await fetch('/api/generate-report', { method: 'POST' });
             const result = await res.json();
+            
             if (result.success) {
                 const grid = document.getElementById('listaRelatorios');
-                const empty = grid.querySelector('.empty-state');
-                if (empty) empty.remove();
-
                 const div = document.createElement('div');
                 div.className = 'report-item';
                 div.innerHTML = `
@@ -254,9 +251,16 @@
                     <a href="/api/download/${result.filename}" class="btn-download" target="_blank">Download</a>
                 `;
                 grid.prepend(div);
+            } else {
+                // EXIBE O ERRO REAL DA AZURE
+                alert("Erro no Servidor: " + result.error);
             }
-        } catch (err) { alert("Vault communication failed."); }
-        finally { btn.disabled = false; btn.innerHTML = originalText; }
+        } catch (err) {
+            alert("Erro de Rede: Não foi possível contactar o servidor.");
+        } finally {
+            btn.disabled = false; 
+            btn.innerHTML = originalText;
+        }
     }
 
     socket.on('priceUpdate', (newPrices) => {
