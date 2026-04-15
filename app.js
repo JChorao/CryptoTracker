@@ -11,25 +11,19 @@ const server = http.createServer(app);
 const io = socketio(server);
 const PORT = process.env.PORT || 3000;
 
-// Configurações Azure
 const cosmosConn = process.env.COSMOS_CONNECTION_STRING;
 const storageConn = process.env.AZURE_STORAGE_CONNECTION_STRING;
 
 let container;
 let containerClient;
 
-// Inicialização segura
-try {
-    if (cosmosConn) {
-        const client = new CosmosClient(cosmosConn);
-        container = client.database(process.env.COSMOS_DB_NAME || "CryptoDB").container(process.env.COSMOS_CONTAINER_NAME || "PriceHistory");
-    }
-    if (storageConn) {
-        const blobServiceClient = BlobServiceClient.fromConnectionString(storageConn);
-        containerClient = blobServiceClient.getContainerClient("reports");
-    }
-} catch (e) {
-    console.error("Erro na inicialização da Azure:", e.message);
+if (cosmosConn) {
+    const client = new CosmosClient(cosmosConn);
+    container = client.database(process.env.COSMOS_DB_NAME || "CryptoDB").container(process.env.COSMOS_CONTAINER_NAME || "PriceHistory");
+}
+if (storageConn) {
+    const blobServiceClient = BlobServiceClient.fromConnectionString(storageConn);
+    containerClient = blobServiceClient.getContainerClient("reports");
 }
 
 app.use(express.json());
@@ -57,53 +51,33 @@ app.get('/', async (req, res) => {
                 reports.push(blob.name);
             }
         }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Erro ao carregar dados:", err.message); }
     res.render('index', { coinData, reports: reports.reverse() });
 });
 
-// ENDPOINT CRÍTICO: Geração e Upload
+// ESTA ROTA É O QUE O BOTÃO CHAMA
 app.post('/api/generate-report', async (req, res) => {
-    console.log("Pedido de relatório recebido...");
     try {
-        if (!container || !containerClient) {
-            return res.status(500).json({ success: false, error: "Azure Storage ou Cosmos não configurados nas variáveis de ambiente." });
-        }
-
-        const { resources } = await container.items.query("SELECT TOP 30 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC").fetchAll();
-
+        if (!containerClient || !container) throw new Error("Azure Services não ligados.");
+        
+        const { resources } = await container.items.query("SELECT TOP 20 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC").fetchAll();
+        
         const doc = new PDFDocument();
         let chunks = [];
         doc.on('data', chunk => chunks.push(chunk));
-        
         doc.on('end', async () => {
-            try {
-                const pdfBuffer = Buffer.concat(chunks);
-                const filename = `Audit_${Date.now()}.pdf`;
-                const blockBlobClient = containerClient.getBlockBlobClient(filename);
-                
-                await blockBlobClient.upload(pdfBuffer, pdfBuffer.length, {
-                    blobHTTPHeaders: { blobContentType: "application/pdf" }
-                });
-                
-                console.log("Relatório guardado com sucesso:", filename);
-                res.json({ success: true, filename });
-            } catch (uploadErr) {
-                console.error("Erro no upload para o Blob:", uploadErr);
-                res.status(500).json({ success: false, error: "Falha ao guardar no Storage: " + uploadErr.message });
-            }
+            const pdfBuffer = Buffer.concat(chunks);
+            const filename = `Audit_${Date.now()}.pdf`;
+            const blockBlobClient = containerClient.getBlockBlobClient(filename);
+            await blockBlobClient.upload(pdfBuffer, pdfBuffer.length, { blobHTTPHeaders: { blobContentType: "application/pdf" } });
+            res.json({ success: true, filename });
         });
 
-        doc.fontSize(22).fillColor('#f0b90b').text('CRYPTO TRACKER AUDIT', { align: 'center' });
+        doc.fontSize(20).text('CryptoTracker Audit', { align: 'center' });
         doc.moveDown();
-        doc.fontSize(10).fillColor('#333').text(`Generated on: ${new Date().toISOString()}`);
-        doc.moveDown();
-        resources.forEach(item => {
-            doc.text(`Time: ${item.timestamp} | BTC: ${item.prices?.bitcoin?.eur || 'N/A'} EUR`);
-        });
+        resources.forEach(r => doc.fontSize(10).text(`${r.timestamp}: BTC ${r.prices?.bitcoin?.eur}€`));
         doc.end();
-
     } catch (err) {
-        console.error("Erro geral na API:", err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -114,7 +88,12 @@ app.get('/api/download/:name', async (req, res) => {
         const download = await blockBlobClient.download(0);
         res.setHeader('Content-Type', 'application/pdf');
         download.readableStreamBody.pipe(res);
-    } catch (err) { res.status(404).send("Ficheiro não encontrado."); }
+    } catch (err) { res.status(404).send("Não encontrado."); }
+} );
+
+app.post('/api/update-prices', (req, res) => {
+    io.emit('priceUpdate', req.body);
+    res.status(200).send('OK');
 });
 
-server.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Web App na porta ${PORT}`));

@@ -4,4 +4,4 @@ COPY package*.json ./
 RUN npm install --production
 COPY . .
 
-CMD ["node", "app.js"]
+CMD ["node", "api/save-report.js"]

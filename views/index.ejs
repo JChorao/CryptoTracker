@@ -75,26 +75,33 @@
         
         .coin-row { background: var(--bg2); border: 1px solid var(--border); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
         .coin-row:hover { background: var(--bg3); border-color: var(--gold-dim); transform: scale(1.01); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .coin-row.active { border-color: var(--gold); background: var(--gold-dim); }
         .coin-row td { padding: 25px 20px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
         .coin-row td:first-child { border-left: 1px solid var(--border); border-radius: 12px 0 0 12px; }
         .coin-row td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12px 0; }
 
-        .coin-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fff; }
+        .coin-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fff; text-transform: uppercase; }
         .price-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.3rem; color: var(--gold); }
 
-        .reports-dashboard { margin-top: 80px; padding: 40px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+        .detail-panel { background: var(--bg3); border-radius: 12px; margin: -5px 0 20px 0; overflow: hidden; border: 1px solid var(--border); }
+        .detail-inner { display: grid; grid-template-columns: 300px 1fr; gap: 0; }
+        .calc-side { padding: 30px; border-right: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+        .chart-side { padding: 30px; }
+
+        .calc-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; margin-bottom: 15px; font-family: 'JetBrains Mono'; }
+        .calc-input:focus { outline: none; border-color: var(--gold); }
+        .profit-amount { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 700; }
+        .pos { color: var(--green); }
+        .neg { color: var(--red); }
+
+        .reports-dashboard { margin-top: 80px; padding: 40px; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); border: 1px solid var(--border); border-radius: 20px; }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
         .dashboard-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fff; text-transform: uppercase; letter-spacing: 0.1em; }
         
         .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-        .report-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; transition: 0.3s; }
+        .report-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; }
         
-        .report-icon { width: 40px; height: 40px; background: var(--gold-dim); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.2rem; margin-right: 15px; }
-        .report-info { flex: 1; min-width: 0; }
-        .report-name { display: block; font-size: 0.8rem; font-weight: 600; color: #eee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
-        .report-meta { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
-
-        .btn-action { background: var(--gold); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: 0.3s; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-action { background: var(--gold); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: 0.3s; cursor: pointer; }
         .btn-action:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--gold-glow); }
 
         .btn-download { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border); font-size: 0.65rem; padding: 8px 15px; border-radius: 6px; text-decoration: none; transition: 0.2s; }
@@ -121,7 +128,7 @@
                 <th>Asset</th>
                 <th>Price Index</th>
                 <th style="text-align:center">Performance</th>
-                <th style="text-align:right">Actions</th>
+                <th style="text-align:right">Details</th>
             </tr>
         </thead>
         <tbody>
@@ -131,18 +138,31 @@
                 %>
                 <tr class="coin-row" id="row-<%= coin %>" onclick="toggleDetail('<%= coin %>')">
                     <td>
-                        <div class="coin-name"><%= coin.toUpperCase() %></div>
+                        <div class="coin-name"><%= coin %></div>
                         <div style="font-size:0.6rem; color:var(--text-muted);">COINGECKO / EUR</div>
                     </td>
                     <td><span class="price-val" id="price-<%= coin %>" data-raw="<%= cur %>"><%= cur.toLocaleString('pt-PT', {minimumFractionDigits:2}) %>€</span></td>
                     <td style="text-align:center"><span id="trend-<%= coin %>" style="font-size:0.8rem; color:var(--text-dim);">—</span></td>
-                    <td style="text-align:right"><button class="btn-download">VIEW CHART</button></td>
+                    <td style="text-align:right"><button class="btn-download" id="expand-btn-<%= coin %>">+ VIEW</button></td>
                 </tr>
-                <tr id="detail-row-<%= coin %>" style="display:none;"><td colspan="4">
-                    <div style="padding:40px; background:var(--bg3); border-radius:12px; margin: 10px 0;">
-                        <div style="height:250px;"><canvas id="chart-<%= coin %>"></canvas></div>
-                    </div>
-                </td></tr>
+                <tr id="detail-row-<%= coin %>" style="display:none;">
+                    <td colspan="4">
+                        <div class="detail-panel">
+                            <div class="detail-inner">
+                                <div class="calc-side">
+                                    <div style="font-size:0.6rem; color:var(--gold); margin-bottom:15px; letter-spacing:0.1em;">PROFIT CALCULATOR</div>
+                                    <input type="number" class="calc-input qty-in" data-coin="<%= coin %>" placeholder="Quantity">
+                                    <input type="number" class="calc-input buy-in" data-coin="<%= coin %>" placeholder="Buy Price (€)">
+                                    <div style="font-size:0.6rem; color:var(--text-dim); margin-top:10px;">ESTIMATED P/L</div>
+                                    <div class="profit-amount" id="profit-<%= coin %>">0.00€</div>
+                                </div>
+                                <div class="chart-side">
+                                    <div style="height:250px;"><canvas id="chart-<%= coin %>"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
                 <% }); %>
             <% } %>
         </tbody>
@@ -160,16 +180,18 @@
             <% if (typeof reports !== 'undefined' && reports.length > 0) { %>
                 <% reports.forEach(function(report) { %>
                     <div class="report-item">
-                        <div class="report-icon">PDF</div>
-                        <div class="report-info">
-                            <span class="report-name"><%= report %></span>
-                            <span class="report-meta">Secured / Blob Storage</span>
+                        <div style="display:flex; align-items:center;">
+                            <div style="background:var(--gold-dim); padding:10px; border-radius:8px; color:var(--gold); margin-right:15px; font-weight:800; font-size:0.7rem;">PDF</div>
+                            <div class="report-info">
+                                <span class="report-name"><%= report %></span>
+                                <span style="font-size:0.6rem; color:var(--text-muted);">Secured / Azure Storage</span>
+                            </div>
                         </div>
                         <a href="/api/download/<%= report %>" class="btn-download" target="_blank">Download</a>
                     </div>
                 <% }); %>
             <% } else { %>
-                <div class="empty-state">No audit logs found in the vault.</div>
+                <div class="empty-state" style="grid-column: 1/-1; text-align:center; color:var(--text-dim); padding:40px;">No audit logs found in the vault.</div>
             <% } %>
         </div>
     </div>
@@ -190,17 +212,25 @@
 
     function toggleDetail(coin) {
         const row = document.getElementById(`detail-row-${coin}`);
+        const coinRow = document.getElementById(`row-${coin}`);
+        const btn = document.getElementById(`expand-btn-${coin}`);
         const isVisible = row.style.display !== 'none';
-        document.querySelectorAll('[id^="detail-row-"]').forEach(r => r.style.display = 'none');
+        
         if (!isVisible) {
             row.style.display = 'table-row';
+            coinRow.classList.add('active');
+            btn.textContent = '- HIDE';
             if (!charts[coin]) initChart(coin);
+        } else {
+            row.style.display = 'none';
+            coinRow.classList.remove('active');
+            btn.textContent = '+ VIEW';
         }
     }
 
     function initChart(coin) {
         const ctx = document.getElementById(`chart-${coin}`).getContext('2d');
-        const data = coinHistories[coin];
+        const data = coinHistories[coin] || [];
         charts[coin] = new Chart(ctx, {
             type: 'line',
             data: {
@@ -209,9 +239,9 @@
                     data: data.map(d => d.price), 
                     borderColor: '#f0b90b', 
                     borderWidth: 2,
-                    pointRadius: 4, // PONTOS ADICIONADOS
+                    pointRadius: 4,
                     pointBackgroundColor: '#f0b90b',
-                    pointHoverRadius: 6,
+                    pointHoverRadius: 7,
                     tension: 0.4,
                     fill: true,
                     backgroundColor: 'rgba(240,185,11,0.05)'
@@ -222,8 +252,8 @@
                 maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
                 scales: { 
-                    x: { display: false }, 
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555', font: { size: 10 } } } 
+                    x: { display: true, grid: { display: false }, ticks: { color: '#444' } }, 
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666' } } 
                 }
             }
         });
@@ -232,36 +262,39 @@
     async function requestReport(btn) {
         const originalText = btn.innerHTML;
         btn.disabled = true; 
-        btn.innerHTML = "<span>Processing Audit...</span>";
+        btn.innerHTML = "<span>Processing...</span>";
         
         try {
             const res = await fetch('/api/generate-report', { method: 'POST' });
             const result = await res.json();
             
             if (result.success) {
-                const grid = document.getElementById('listaRelatorios');
-                const div = document.createElement('div');
-                div.className = 'report-item';
-                div.innerHTML = `
-                    <div class="report-icon">PDF</div>
-                    <div class="report-info">
-                        <span class="report-name">${result.filename}</span>
-                        <span class="report-meta">Secured / Blob Storage</span>
-                    </div>
-                    <a href="/api/download/${result.filename}" class="btn-download" target="_blank">Download</a>
-                `;
-                grid.prepend(div);
+                location.reload(); // Refresh to update list
             } else {
-                // EXIBE O ERRO REAL DA AZURE
-                alert("Erro no Servidor: " + result.error);
+                alert("Server Error: " + (result.error || "Unknown"));
             }
         } catch (err) {
-            alert("Erro de Rede: Não foi possível contactar o servidor.");
+            alert("Network Error: Could not reach the server.");
         } finally {
             btn.disabled = false; 
             btn.innerHTML = originalText;
         }
     }
+
+    // Calculadora de Lucro
+    document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('qty-in') || e.target.classList.contains('buy-in')) {
+            const coin = e.target.dataset.coin;
+            const qty = parseFloat(document.querySelector(`.qty-in[data-coin="${coin}"]`).value) || 0;
+            const buyPrice = parseFloat(document.querySelector(`.buy-in[data-coin="${coin}"]`).value) || 0;
+            const currentPrice = parseFloat(document.getElementById(`price-${coin}`).getAttribute('data-raw'));
+            
+            const profit = (currentPrice - buyPrice) * qty;
+            const display = document.getElementById(`profit-${coin}`);
+            display.textContent = profit.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
+            display.className = 'profit-amount ' + (profit >= 0 ? 'pos' : 'neg');
+        }
+    });
 
     socket.on('priceUpdate', (newPrices) => {
         Object.keys(newPrices).forEach(coin => {
@@ -273,8 +306,22 @@
                 el.setAttribute('data-raw', price);
                 
                 const trend = document.getElementById(`trend-${coin}`);
-                if (price > oldPrice) trend.textContent = '▲', trend.style.color = 'var(--green)';
-                else if (price < oldPrice) trend.textContent = '▼', trend.style.color = 'var(--red)';
+                if (price > oldPrice) {
+                    trend.textContent = '▲'; trend.style.color = 'var(--green)';
+                } else if (price < oldPrice) {
+                    trend.textContent = '▼'; trend.style.color = 'var(--red)';
+                }
+
+                if (charts[coin]) {
+                    const now = new Date().toLocaleTimeString();
+                    charts[coin].data.labels.push(now);
+                    charts[coin].data.datasets[0].data.push(price);
+                    if (charts[coin].data.labels.length > 20) {
+                        charts[coin].data.labels.shift();
+                        charts[coin].data.datasets[0].data.shift();
+                    }
+                    charts[coin].update('none');
+                }
             }
         });
     });
