@@ -73,7 +73,7 @@ async function generateReport() {
         doc.on('end', async () => {
             try {
                 const pdfBuffer = Buffer.concat(chunks);
-                const blobName = `Audit_FullStats_${Date.now()}.pdf`;
+                const blobName = `Audit_${Date.now()}.pdf`;
                 const blockBlobClient = containerClient.getBlockBlobClient(blobName);
                 
                 await blockBlobClient.upload(pdfBuffer, pdfBuffer.length, {
