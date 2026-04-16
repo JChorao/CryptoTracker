@@ -168,25 +168,25 @@
                 const old = parseFloat(el.getAttribute('data-raw') || 0);
                 const price = typeof newPrices[coin] === 'object' ? newPrices[coin].eur : newPrices[coin];
                 
-                // Atualizar tabela
+                // 1. Atualizar tabela e badge de tendência
                 el.textContent = price.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
                 el.setAttribute('data-raw', price);
                 const trend = document.getElementById(`trend-${coin}`);
                 if (price > old) { trend.textContent = '▲'; trend.style.color = 'var(--green)'; }
                 else if (price < old) { trend.textContent = '▼'; trend.style.color = 'var(--red)'; }
 
-                // ATUALIZAR GRÁFICO DINAMICAMENTE
+                // 2. Injetar pontos dinâmicos no gráfico aberto
                 if (charts[coin]) {
                     const now = new Date().toLocaleTimeString('pt-PT');
                     charts[coin].data.labels.push(now);
                     charts[coin].data.datasets[0].data.push(price);
                     
-                    // Manter apenas os últimos 60 pontos no gráfico para performance
+                    // Manter a performance limitando a 60 pontos visíveis
                     if (charts[coin].data.labels.length > 60) {
                         charts[coin].data.labels.shift();
                         charts[coin].data.datasets[0].data.shift();
                     }
-                    charts[coin].update('none'); // Update suave
+                    charts[coin].update('none'); // Faz render sem recarregar toda a animação
                 }
             }
         });

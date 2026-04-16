@@ -4,7 +4,9 @@ const path = require('path');
 const { CosmosClient } = require("@azure/cosmos");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const socketio = require('socket.io');
-const PDFDocument = require('pdfkit');
+
+// Importa a nova lógica separada
+const { generateReport } = require('./api/generate-report'); 
 
 const app = express();
 const server = http.createServer(app);
@@ -45,42 +47,20 @@ app.get('/', async (req, res) => {
     res.render('index', { coinData, reports: reports.reverse() });
 });
 
-// Endpoint chamado pela Azure Function
-app.post('/api/update-prices', (req, res) => {
-    // Emite para todos os browsers ligados via Socket.io
-    io.emit('priceUpdate', req.body);
-    res.status(200).send('OK');
-});
-
+// Endpoint chamado pelo botão da UI
 app.post('/api/generate-report', async (req, res) => {
     try {
-        await containerClient.createIfNotExists();
-        const { resources } = await container.items
-            .query("SELECT TOP 50 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
-            .fetchAll();
-
-        const doc = new PDFDocument();
-        let chunks = [];
-        doc.on('data', chunk => chunks.push(chunk));
-        doc.on('end', async () => {
-            const pdfBuffer = Buffer.concat(chunks);
-            const filename = `Audit_${Date.now()}.pdf`;
-            const blockBlobClient = containerClient.getBlockBlobClient(filename);
-            await blockBlobClient.upload(pdfBuffer, pdfBuffer.length, {
-                blobHTTPHeaders: { blobContentType: "application/pdf" }
-            });
-            res.json({ success: true, filename });
-        });
-
-        doc.fontSize(24).fillColor('#f0b90b').text('CryptoTracker IPCB Audit', { align: 'center' });
-        doc.moveDown();
-        resources.forEach(item => {
-            doc.fontSize(10).fillColor('#000').text(`${item.timestamp}: BTC ${item.prices?.bitcoin?.eur}€`);
-        });
-        doc.end();
+        const filename = await generateReport();
+        res.json({ success: true, filename });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
+// Recebe os dados da Azure Function e atualiza os clientes em tempo real
+app.post('/api/update-prices', (req, res) => {
+    io.emit('priceUpdate', req.body);
+    res.status(200).send('OK');
 });
 
 app.get('/api/download/:name', async (req, res) => {
@@ -89,7 +69,7 @@ app.get('/api/download/:name', async (req, res) => {
         const downloadResponse = await blockBlobClient.download(0);
         res.setHeader('Content-Type', 'application/pdf');
         downloadResponse.readableStreamBody.pipe(res);
-    } catch (err) { res.status(404).send("Não encontrado."); }
+    } catch (err) { res.status(404).send("Ficheiro não encontrado."); }
 });
 
-server.listen(PORT, () => console.log(`🚀 Web App na porta ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Servidor na porta ${PORT}`));
