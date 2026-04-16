@@ -37,8 +37,8 @@ app.get('/', async (req, res) => {
             }
         });
 
-        // Garantir que o contentor existe antes de listar
-        await containerClient.createIfNotExists({ access: 'blob' });
+        // Garantir que o contentor existe antes de listar (sem forçar acesso público)
+        await containerClient.createIfNotExists();
         for await (const blob of containerClient.listBlobsFlat()) {
             reports.push(blob.name);
         }
@@ -48,8 +48,8 @@ app.get('/', async (req, res) => {
 
 app.post('/api/generate-report', async (req, res) => {
     try {
-        // CORREÇÃO: Criar o contentor se ele não existir antes do upload
-        await containerClient.createIfNotExists({ access: 'blob' });
+        // Criar o contentor se ele não existir antes do upload (sem forçar acesso público)
+        await containerClient.createIfNotExists();
 
         const { resources } = await container.items
             .query("SELECT TOP 50 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
