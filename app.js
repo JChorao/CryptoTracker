@@ -37,7 +37,6 @@ app.get('/', async (req, res) => {
             }
         });
 
-        // Garantir que o contentor existe antes de listar (sem forçar acesso público)
         await containerClient.createIfNotExists();
         for await (const blob of containerClient.listBlobsFlat()) {
             reports.push(blob.name);
@@ -46,11 +45,16 @@ app.get('/', async (req, res) => {
     res.render('index', { coinData, reports: reports.reverse() });
 });
 
+// Endpoint chamado pela Azure Function
+app.post('/api/update-prices', (req, res) => {
+    // Emite para todos os browsers ligados via Socket.io
+    io.emit('priceUpdate', req.body);
+    res.status(200).send('OK');
+});
+
 app.post('/api/generate-report', async (req, res) => {
     try {
-        // Criar o contentor se ele não existir antes do upload (sem forçar acesso público)
         await containerClient.createIfNotExists();
-
         const { resources } = await container.items
             .query("SELECT TOP 50 * FROM c WHERE c.partitionKey = 'crypto_data' ORDER BY c.timestamp DESC")
             .fetchAll();
@@ -75,7 +79,7 @@ app.post('/api/generate-report', async (req, res) => {
         });
         doc.end();
     } catch (err) {
-        res.status(500).json({ success: false, error: "Falha ao guardar no Storage: " + err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -85,12 +89,7 @@ app.get('/api/download/:name', async (req, res) => {
         const downloadResponse = await blockBlobClient.download(0);
         res.setHeader('Content-Type', 'application/pdf');
         downloadResponse.readableStreamBody.pipe(res);
-    } catch (err) { res.status(404).send("Ficheiro não encontrado."); }
-});
-
-app.post('/api/update-prices', (req, res) => {
-    io.emit('priceUpdate', req.body);
-    res.status(200).send('OK');
+    } catch (err) { res.status(404).send("Não encontrado."); }
 });
 
 server.listen(PORT, () => console.log(`🚀 Web App na porta ${PORT}`));

@@ -12,7 +12,6 @@
         :root { --gold: #f0b90b; --gold-dim: rgba(240,185,11,0.12); --gold-glow: rgba(240,185,11,0.25); --green: #0ecb81; --red: #f6465d; --bg: #000000; --bg2: #080808; --bg3: #0d0d0d; --border: rgba(255,255,255,0.08); --text-muted: #555; --text-dim: #999; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; }
-        body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(240,185,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(240,185,11,0.03) 1px, transparent 1px); background-size: 50px 50px; pointer-events: none; z-index: 0; }
         .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 60px 24px; }
         header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 60px; padding-bottom: 30px; border-bottom: 1px solid var(--border); }
         .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; letter-spacing: -0.04em; line-height: 1; }
@@ -52,8 +51,9 @@
         <thead><tr><th>Moeda</th><th>Preço Index</th><th style="text-align:center">Performance</th><th style="text-align:right">Ações</th></tr></thead>
         <tbody>
             <% if (typeof coinData !== 'undefined') { %>
-                <% Object.keys(coinData).forEach((coin) => {
-                    const cur = coinData[coin][coinData[coin].length - 1]?.price || 0;
+                <% Object.keys(coinData).forEach((coin) => { 
+                    const history = coinData[coin];
+                    const cur = history.length > 0 ? history[history.length - 1].price : 0;
                 %>
                 <tr class="coin-row" onclick="toggleDetail('<%= coin %>')">
                     <td><div style="font-weight:700; font-family:'Syne';"><%= coin.toUpperCase() %></div><div style="font-size:0.6rem; color:var(--text-muted);">COINGECKO / EUR</div></td>
@@ -121,13 +121,17 @@
         charts[coin] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString()),
+                labels: data.map(d => new Date(d.timestamp).toLocaleTimeString('pt-PT')),
                 datasets: [{ 
                     data: data.map(d => d.price), borderColor: '#f0b90b', borderWidth: 2,
-                    pointRadius: 4, pointHoverRadius: 7, pointBackgroundColor: '#f0b90b', tension: 0.4, fill: true, backgroundColor: 'rgba(240,185,11,0.05)'
+                    pointRadius: 2, tension: 0.4, fill: true, backgroundColor: 'rgba(240,185,11,0.05)'
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false }, y: { ticks: { color: '#555' } } }
+            }
         });
     }
 
@@ -137,11 +141,12 @@
             const res = await fetch('/api/generate-report', { method: 'POST' });
             const result = await res.json();
             if (result.success) location.reload();
-            else alert("Erro no Servidor: " + result.error);
+            else alert("Erro: " + result.error);
         } catch (err) { alert("Erro na comunicação."); }
         finally { btn.disabled = false; btn.textContent = "Gerar Auditoria"; }
     }
 
+    // Lógica da calculadora
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('qty-in') || e.target.classList.contains('buy-in')) {
             const coin = e.target.dataset.coin;
@@ -155,17 +160,34 @@
         }
     });
 
+    // ATUALIZAÇÃO EM TEMPO REAL (Tabelas + Gráficos)
     socket.on('priceUpdate', (newPrices) => {
         Object.keys(newPrices).forEach(coin => {
             const el = document.getElementById(`price-${coin}`);
             if (el) {
                 const old = parseFloat(el.getAttribute('data-raw') || 0);
-                const price = newPrices[coin];
+                const price = typeof newPrices[coin] === 'object' ? newPrices[coin].eur : newPrices[coin];
+                
+                // Atualizar tabela
                 el.textContent = price.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
                 el.setAttribute('data-raw', price);
                 const trend = document.getElementById(`trend-${coin}`);
                 if (price > old) { trend.textContent = '▲'; trend.style.color = 'var(--green)'; }
                 else if (price < old) { trend.textContent = '▼'; trend.style.color = 'var(--red)'; }
+
+                // ATUALIZAR GRÁFICO DINAMICAMENTE
+                if (charts[coin]) {
+                    const now = new Date().toLocaleTimeString('pt-PT');
+                    charts[coin].data.labels.push(now);
+                    charts[coin].data.datasets[0].data.push(price);
+                    
+                    // Manter apenas os últimos 60 pontos no gráfico para performance
+                    if (charts[coin].data.labels.length > 60) {
+                        charts[coin].data.labels.shift();
+                        charts[coin].data.datasets[0].data.shift();
+                    }
+                    charts[coin].update('none'); // Update suave
+                }
             }
         });
     });
