@@ -112,6 +112,7 @@
         if (!isVisible) {
             row.style.display = 'table-row';
             if (!charts[coin]) initChart(coin);
+            updateProfitCalc(coin); // Força atualização ao abrir o painel
         }
     }
 
@@ -146,21 +147,35 @@
         finally { btn.disabled = false; btn.textContent = "Gerar Auditoria"; }
     }
 
-    // Lógica da calculadora
+    // --- NOVA LÓGICA DA CALCULADORA (Extraída para reutilização) ---
+    function updateProfitCalc(coin) {
+        const qtyInput = document.querySelector(`.qty-in[data-coin="${coin}"]`);
+        const buyInput = document.querySelector(`.buy-in[data-coin="${coin}"]`);
+        
+        // Evita erro se a UI ainda não estiver renderizada
+        if (!qtyInput || !buyInput) return;
+
+        const qty = parseFloat(qtyInput.value) || 0;
+        const buy = parseFloat(buyInput.value) || 0;
+        const current = parseFloat(document.getElementById(`price-${coin}`).getAttribute('data-raw')) || 0;
+
+        const profit = (current - buy) * qty;
+        const display = document.getElementById(`profit-${coin}`);
+        
+        if (display) {
+            display.textContent = profit.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2}) + '€';
+            display.className = 'profit-amount ' + (profit >= 0 ? 'pos' : 'neg');
+        }
+    }
+
+    // Dispara a conta quando o utilizador escreve nos inputs
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('qty-in') || e.target.classList.contains('buy-in')) {
-            const coin = e.target.dataset.coin;
-            const qty = parseFloat(document.querySelector(`.qty-in[data-coin="${coin}"]`).value) || 0;
-            const buy = parseFloat(document.querySelector(`.buy-in[data-coin="${coin}"]`).value) || 0;
-            const current = parseFloat(document.getElementById(`price-${coin}`).getAttribute('data-raw'));
-            const profit = (current - buy) * qty;
-            const display = document.getElementById(`profit-${coin}`);
-            display.textContent = profit.toLocaleString('pt-PT', {minimumFractionDigits:2}) + '€';
-            display.className = 'profit-amount ' + (profit >= 0 ? 'pos' : 'neg');
+            updateProfitCalc(e.target.dataset.coin);
         }
     });
 
-    // ATUALIZAÇÃO EM TEMPO REAL (Tabelas + Gráficos)
+    // ATUALIZAÇÃO EM TEMPO REAL (Tabelas + Gráficos + Calculadora)
     socket.on('priceUpdate', (newPrices) => {
         Object.keys(newPrices).forEach(coin => {
             const el = document.getElementById(`price-${coin}`);
@@ -188,6 +203,9 @@
                     }
                     charts[coin].update('none'); // Faz render sem recarregar toda a animação
                 }
+
+                // 3. Atualizar automaticamente a calculadora em tempo real!
+                updateProfitCalc(coin);
             }
         });
     });
