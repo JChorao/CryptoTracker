@@ -94,13 +94,13 @@ echo "🤖 A INICIAR DEPLOYS AUTOMÁTICOS NO GITHUB ACTIONS..."
 echo "------------------------------------------------------------------"
 sleep 5 
 
-WEB_RUN_ID=$(gh run list --workflow=deploy.yml --limit 1 --json databaseId -q '.[0].databaseId')
+WEB_RUN_ID=$(gh run list --workflow=deploy.yml --repo "$GH_REPO" --limit 1 --json databaseId -q '.[0].databaseId')
 if [ -n "$WEB_RUN_ID" ]; then
     echo "▶️ A relançar o deploy da Web App (Run ID: $WEB_RUN_ID)..."
     gh run rerun $WEB_RUN_ID || echo "⚠️ Não foi possível relançar a Web App."
 fi
 
-FUNC_RUN_ID=$(gh run list --workflow=deploy-function.yml --limit 1 --json databaseId -q '.[0].databaseId')
+FUNC_RUN_ID=$(gh run list --workflow=deploy-function.yml --repo "$GH_REPO" --limit 1 --json databaseId -q '.[0].databaseId')
 if [ -n "$FUNC_RUN_ID" ]; then
     echo "▶️ A relançar o deploy da Azure Function (Run ID: $FUNC_RUN_ID)..."
     gh run rerun $FUNC_RUN_ID || echo "⚠️ Não foi possível relançar a Function."

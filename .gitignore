@@ -3,3 +3,4 @@ node_modules/
 publish-profile.xml
 *.log
 .DS_Store
+.terraform/
