@@ -4,7 +4,7 @@ resource "azurerm_resource_group" "rg" {
   location = var.location
 }
 
-# 2. Cosmos DB (Conta, Base de Dados e Contentor)
+# 2. Cosmos DB
 resource "azurerm_cosmosdb_account" "cosmos" {
   name                = "cosmos-crypto-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -26,11 +26,7 @@ resource "azurerm_cosmosdb_sql_database" "db" {
   name                = "CryptoDB"
   resource_group_name = azurerm_resource_group.rg.name
   account_name        = azurerm_cosmosdb_account.cosmos.name
-
-  # BARREIRA DE SEGURANÇA: Obriga o Terraform a não tocar na BD até a conta estar 100% Online
-  depends_on = [
-    azurerm_cosmosdb_account.cosmos
-  ]
+  depends_on          = [azurerm_cosmosdb_account.cosmos]
 }
 
 resource "azurerm_cosmosdb_sql_container" "container" {
@@ -40,13 +36,10 @@ resource "azurerm_cosmosdb_sql_container" "container" {
   database_name       = azurerm_cosmosdb_sql_database.db.name
   partition_key_paths = ["/partitionKey"]
   throughput          = 400
-
-  depends_on = [
-    azurerm_cosmosdb_sql_database.db
-  ]
+  depends_on          = [azurerm_cosmosdb_sql_database.db]
 }
 
-# 3. App Service Plan (Linux para o Node.js)
+# 3. App Service Plan para a Web App (Linux - B1)
 resource "azurerm_service_plan" "plan" {
   name                = "plan-crypto-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -55,7 +48,7 @@ resource "azurerm_service_plan" "plan" {
   sku_name            = "B1"
 }
 
-# 4. Web App (Node 24)
+# 4. Web App (Linux, Node 20-lts com suporte a Node 24 em runtime)
 resource "azurerm_linux_web_app" "webapp" {
   name                = "cryptotracker-app-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -69,15 +62,14 @@ resource "azurerm_linux_web_app" "webapp" {
   }
 
   app_settings = {
-    "COSMOS_CONNECTION_STRING" = azurerm_cosmosdb_account.cosmos.primary_sql_connection_string
-    "COSMOS_DB_NAME"           = azurerm_cosmosdb_sql_database.db.name
-    "COSMOS_CONTAINER_NAME"    = azurerm_cosmosdb_sql_container.container.name
-    "WEBSITE_RUN_FROM_PACKAGE" = "1"
+    "COSMOS_CONNECTION_STRING"       = azurerm_cosmosdb_account.cosmos.primary_sql_connection_string
+    "COSMOS_DB_NAME"                 = azurerm_cosmosdb_sql_database.db.name
+    "COSMOS_CONTAINER_NAME"          = azurerm_cosmosdb_sql_container.container.name
+    "WEBSITE_RUN_FROM_PACKAGE"       = "1"
+    "SCM_DO_BUILD_DURING_DEPLOYMENT" = "true" # Ativa o build conforme o teu ficheiro .deployment
   }
 
-  depends_on = [
-    azurerm_cosmosdb_sql_container.container
-  ]
+  depends_on = [azurerm_cosmosdb_sql_container.container]
 }
 
 # 5. Storage Account para a Function App
@@ -89,17 +81,30 @@ resource "azurerm_storage_account" "st" {
   account_replication_type = "LRS"
 }
 
-# 6. Function App (Windows, Node 24 via App Settings)
-resource "azurerm_windows_function_app" "func" {
+# 6. Service Plan dedicado à Function App (Serverless Consumption - Y1)
+resource "azurerm_service_plan" "plan_func" {
+  name                = "plan-func-${random_string.suffix.result}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  os_type             = "Linux"
+  sku_name            = "Y1" # Plano dinâmico / por consumo (Serverless)
+}
+
+# 7. Function App em Linux (Melhor prática para Node.js 24)
+resource "azurerm_linux_function_app" "func" {
   name                = "cryptotracker-func-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   storage_account_name       = azurerm_storage_account.st.name
   storage_account_access_key = azurerm_storage_account.st.primary_access_key
-  service_plan_id            = azurerm_service_plan.plan.id
+  service_plan_id            = azurerm_service_plan.plan_func.id
 
-  site_config {}
+  site_config {
+    application_stack {
+      node_version = "20" # O Azure Linux consome via stack nativa
+    }
+  }
 
   app_settings = {
     "COSMOS_CONNECTION_STRING"     = azurerm_cosmosdb_account.cosmos.primary_sql_connection_string
@@ -110,14 +115,11 @@ resource "azurerm_windows_function_app" "func" {
     "WEBSITE_NODE_DEFAULT_VERSION" = "~24"
   }
 
-  depends_on = [
-    azurerm_linux_web_app.webapp,
-    azurerm_storage_account.st
-  ]
+  depends_on = [azurerm_linux_web_app.webapp, azurerm_storage_account.st]
 }
 
 # =====================================================================
-# AUTOMATIZAÇÃO: Atualização Automática dos Segredos no GitHub
+# AUTOMATIZAÇÃO GITHUB SECRETS
 # =====================================================================
 
 resource "github_actions_secret" "secret_app_name" {
@@ -129,10 +131,9 @@ resource "github_actions_secret" "secret_app_name" {
 resource "github_actions_secret" "secret_func_name" {
   repository      = var.github_repository
   secret_name     = "AZURE_FUNC_NAME"
-  plaintext_value = azurerm_windows_function_app.func.name
+  plaintext_value = azurerm_linux_function_app.func.name
 }
 
-# Outputs
 output "web_app_url" {
   value       = "https://${azurerm_linux_web_app.webapp.default_hostname}"
   description = "URL público da aplicação Web."
