@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy-function:
-    runs-on: ubuntu-latest # Alterado para Ubuntu para maior rapidez e compatibilidade Linux
+    runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
@@ -31,4 +31,4 @@ jobs:
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNC_NAME }}
-          package: ./functions # Mantém a pasta, mas agora com o runtime Linux alinhado no Terraform
+          package: ./functions
