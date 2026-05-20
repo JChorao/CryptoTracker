@@ -83,10 +83,9 @@ resource "azurerm_linux_web_app" "webapp" {
 
   site_config {
     application_stack {
-      node_version = "24-lts"
+      node_version = "20-lts"
     }
   }
-
   app_settings = {
     "COSMOS_CONNECTION_STRING"        = azurerm_cosmosdb_account.cosmos.primary_sql_connection_string
     "COSMOS_DB_NAME"                  = azurerm_cosmosdb_sql_database.db.name
@@ -114,7 +113,7 @@ resource "azurerm_linux_function_app" "func" {
 
   site_config {
     application_stack {
-      node_version = "24"
+      node_version = "20"
     }
   }
 
@@ -124,7 +123,7 @@ resource "azurerm_linux_function_app" "func" {
     "COSMOS_CONTAINER_NAME"        = azurerm_cosmosdb_sql_container.container.name
     "APP_SERVICE_URL"              = "https://${azurerm_linux_web_app.webapp.default_hostname}"
     "FUNCTIONS_WORKER_RUNTIME"     = "node"
-    "WEBSITE_NODE_DEFAULT_VERSION" = "~24"
+    "WEBSITE_NODE_DEFAULT_VERSION" = "~20"
   }
 
   depends_on = [azurerm_linux_web_app.webapp, azurerm_storage_account.st_func]

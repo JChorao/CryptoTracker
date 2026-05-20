@@ -7,7 +7,7 @@
     "start": "func start"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "@azure/cosmos": "^4.2.0",
