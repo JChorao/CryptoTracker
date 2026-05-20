@@ -1,10 +1,10 @@
-# 1. Grupo de Recursos ÚNICO
+# 1. Grupo de Recursos ÚNICO (Agora com nome Fixo/Estático)
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-${var.project_name}-${random_string.suffix.result}"
+  name     = "rg-${var.project_name}-production"
   location = var.location
 }
 
-# 2. Cosmos DB
+# 2. Cosmos DB (Mantém o ID aleatório)
 resource "azurerm_cosmosdb_account" "cosmos" {
   name                = "cosmos-crypto-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -39,7 +39,7 @@ resource "azurerm_cosmosdb_sql_container" "container" {
   depends_on          = [azurerm_cosmosdb_sql_database.db]
 }
 
-# 3. Azure Container Registry
+# 3. Azure Container Registry (Mantém o ID aleatório)
 resource "azurerm_container_registry" "acr" {
   name                = "acrcrypto${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.rg.name
@@ -48,7 +48,7 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
-# 4. Storage Accounts (Duas contas separadas, mas no mesmo RG)
+# 4. Storage Accounts (Mantêm o ID aleatório)
 resource "azurerm_storage_account" "st_reports" {
   name                     = "streports${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.rg.name
@@ -65,7 +65,7 @@ resource "azurerm_storage_account" "st_func" {
   account_replication_type = "LRS"
 }
 
-# 5. App Service Plan ÚNICO (Partilhado entre Web App e Function App)
+# 5. App Service Plan ÚNICO
 resource "azurerm_service_plan" "plan" {
   name                = "plan-crypto-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -74,7 +74,7 @@ resource "azurerm_service_plan" "plan" {
   sku_name            = "B1" 
 }
 
-# 6. Web App
+# 6. Web App (Node 20-lts)
 resource "azurerm_linux_web_app" "webapp" {
   name                = "cryptotracker-app-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -86,6 +86,7 @@ resource "azurerm_linux_web_app" "webapp" {
       node_version = "20-lts"
     }
   }
+
   app_settings = {
     "COSMOS_CONNECTION_STRING"        = azurerm_cosmosdb_account.cosmos.primary_sql_connection_string
     "COSMOS_DB_NAME"                  = azurerm_cosmosdb_sql_database.db.name
@@ -101,7 +102,7 @@ resource "azurerm_linux_web_app" "webapp" {
   ]
 }
 
-# 7. Function App (Usa o mesmo App Service Plan da Web App)
+# 7. Function App (Node 20)
 resource "azurerm_linux_function_app" "func" {
   name                = "cryptotracker-func-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -109,7 +110,7 @@ resource "azurerm_linux_function_app" "func" {
 
   storage_account_name       = azurerm_storage_account.st_func.name
   storage_account_access_key = azurerm_storage_account.st_func.primary_access_key
-  service_plan_id            = azurerm_service_plan.plan.id # <-- Aqui partilha o plano
+  service_plan_id            = azurerm_service_plan.plan.id
 
   site_config {
     application_stack {
