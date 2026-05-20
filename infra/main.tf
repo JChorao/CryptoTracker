@@ -1,12 +1,6 @@
-# 1. Grupo de Recursos Principal (Web App, Cosmos DB, ACR)
+# 1. Grupo de Recursos ÚNICO
 resource "azurerm_resource_group" "rg" {
   name     = "rg-${var.project_name}-${random_string.suffix.result}"
-  location = var.location
-}
-
-# 1.1 Grupo de Recursos da Function App (Para contornar a limitação da Azure)
-resource "azurerm_resource_group" "rg_func" {
-  name     = "rg-func-${var.project_name}-${random_string.suffix.result}"
   location = var.location
 }
 
@@ -54,7 +48,7 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
-# 4. Storage Account para os Relatórios
+# 4. Storage Accounts (Duas contas separadas, mas no mesmo RG)
 resource "azurerm_storage_account" "st_reports" {
   name                     = "streports${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.rg.name
@@ -63,16 +57,24 @@ resource "azurerm_storage_account" "st_reports" {
   account_replication_type = "LRS"
 }
 
-# 5. App Service Plan para a Web App (Linux - B1)
+resource "azurerm_storage_account" "st_func" {
+  name                     = "stfunc${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+# 5. App Service Plan ÚNICO (Partilhado entre Web App e Function App)
 resource "azurerm_service_plan" "plan" {
   name                = "plan-crypto-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   os_type             = "Linux"
-  sku_name            = "B1"
+  sku_name            = "B1" 
 }
 
-# 6. Web App (Linux, Node 20-lts com suporte a Node 24 em runtime)
+# 6. Web App
 resource "azurerm_linux_web_app" "webapp" {
   name                = "cryptotracker-app-${random_string.suffix.result}"
   location            = azurerm_resource_group.rg.location
@@ -100,33 +102,15 @@ resource "azurerm_linux_web_app" "webapp" {
   ]
 }
 
-# 7. Storage Account para a Function App (Alocada no novo RG)
-resource "azurerm_storage_account" "st" {
-  name                     = "stcryptotrack${random_string.suffix.result}"
-  resource_group_name      = azurerm_resource_group.rg_func.name
-  location                 = azurerm_resource_group.rg_func.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-}
-
-# 8. Service Plan dedicado à Function App (Serverless Consumption - Y1) no novo RG
-resource "azurerm_service_plan" "plan_func" {
-  name                = "plan-func-${random_string.suffix.result}"
-  location            = azurerm_resource_group.rg_func.location
-  resource_group_name = azurerm_resource_group.rg_func.name
-  os_type             = "Linux"
-  sku_name            = "Y1"
-}
-
-# 9. Function App em Linux (Alocada no novo RG)
+# 7. Function App (Usa o mesmo App Service Plan da Web App)
 resource "azurerm_linux_function_app" "func" {
   name                = "cryptotracker-func-${random_string.suffix.result}"
-  location            = azurerm_resource_group.rg_func.location
-  resource_group_name = azurerm_resource_group.rg_func.name
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 
-  storage_account_name       = azurerm_storage_account.st.name
-  storage_account_access_key = azurerm_storage_account.st.primary_access_key
-  service_plan_id            = azurerm_service_plan.plan_func.id
+  storage_account_name       = azurerm_storage_account.st_func.name
+  storage_account_access_key = azurerm_storage_account.st_func.primary_access_key
+  service_plan_id            = azurerm_service_plan.plan.id # <-- Aqui partilha o plano
 
   site_config {
     application_stack {
@@ -143,11 +127,11 @@ resource "azurerm_linux_function_app" "func" {
     "WEBSITE_NODE_DEFAULT_VERSION" = "~24"
   }
 
-  depends_on = [azurerm_linux_web_app.webapp, azurerm_storage_account.st]
+  depends_on = [azurerm_linux_web_app.webapp, azurerm_storage_account.st_func]
 }
 
 # =====================================================================
-# AUTOMATIZAÇÃO GITHUB SECRETS (Agora usando "value")
+# AUTOMATIZAÇÃO GITHUB SECRETS
 # =====================================================================
 
 resource "github_actions_secret" "secret_app_name" {
