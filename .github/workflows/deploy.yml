@@ -30,9 +30,7 @@ jobs:
 
       - name: 🐳 Docker Login no ACR
         run: |
-          # Obtém a password do ACR para o docker login
-          ACR_PASSWORD=$(az acr repository show-credentials --name ${{ secrets.AZURE_ACR_NAME }} --query password -o tsv || az acr login --name ${{ secrets.AZURE_ACR_NAME }} --expose-token --query accessToken -o tsv)
-          echo "Logging in to ${{ secrets.AZURE_ACR_NAME }}.azurecr.io"
+          echo "A iniciar sessão no ACR: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io"
           az acr login --name ${{ secrets.AZURE_ACR_NAME }}
 
       - name: 🐳 Build e Push de Relatórios
