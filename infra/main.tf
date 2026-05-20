@@ -1,6 +1,12 @@
-# 1. Grupo de Recursos
+# 1. Grupo de Recursos Principal (Web App, Cosmos DB, ACR)
 resource "azurerm_resource_group" "rg" {
   name     = "rg-${var.project_name}-${random_string.suffix.result}"
+  location = var.location
+}
+
+# 1.1 Grupo de Recursos da Function App (Para contornar a limitação da Azure)
+resource "azurerm_resource_group" "rg_func" {
+  name     = "rg-func-${var.project_name}-${random_string.suffix.result}"
   location = var.location
 }
 
@@ -39,7 +45,7 @@ resource "azurerm_cosmosdb_sql_container" "container" {
   depends_on          = [azurerm_cosmosdb_sql_database.db]
 }
 
-# 3. Azure Container Registry (Adicionado para suportar o Docker de Relatórios)
+# 3. Azure Container Registry
 resource "azurerm_container_registry" "acr" {
   name                = "acrcrypto${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.rg.name
@@ -48,7 +54,7 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
-# 4. Storage Account para os Relatórios (Adicionado)
+# 4. Storage Account para os Relatórios
 resource "azurerm_storage_account" "st_reports" {
   name                     = "streports${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.rg.name
@@ -94,29 +100,29 @@ resource "azurerm_linux_web_app" "webapp" {
   ]
 }
 
-# 7. Storage Account para a Function App
+# 7. Storage Account para a Function App (Alocada no novo RG)
 resource "azurerm_storage_account" "st" {
   name                     = "stcryptotrack${random_string.suffix.result}"
-  resource_group_name      = azurerm_resource_group.rg.name
-  location                 = azurerm_resource_group.rg.location
+  resource_group_name      = azurerm_resource_group.rg_func.name
+  location                 = azurerm_resource_group.rg_func.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-# 8. Service Plan dedicado à Function App (Serverless Consumption - Y1)
+# 8. Service Plan dedicado à Function App (Serverless Consumption - Y1) no novo RG
 resource "azurerm_service_plan" "plan_func" {
   name                = "plan-func-${random_string.suffix.result}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg_func.location
+  resource_group_name = azurerm_resource_group.rg_func.name
   os_type             = "Linux"
   sku_name            = "Y1"
 }
 
-# 9. Function App em Linux
+# 9. Function App em Linux (Alocada no novo RG)
 resource "azurerm_linux_function_app" "func" {
   name                = "cryptotracker-func-${random_string.suffix.result}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg_func.location
+  resource_group_name = azurerm_resource_group.rg_func.name
 
   storage_account_name       = azurerm_storage_account.st.name
   storage_account_access_key = azurerm_storage_account.st.primary_access_key
@@ -141,25 +147,25 @@ resource "azurerm_linux_function_app" "func" {
 }
 
 # =====================================================================
-# AUTOMATIZAÇÃO GITHUB SECRETS
+# AUTOMATIZAÇÃO GITHUB SECRETS (Agora usando "value")
 # =====================================================================
 
 resource "github_actions_secret" "secret_app_name" {
   repository      = var.github_repository
   secret_name     = "AZURE_APP_NAME"
-  plaintext_value = azurerm_linux_web_app.webapp.name
+  value           = azurerm_linux_web_app.webapp.name
 }
 
 resource "github_actions_secret" "secret_func_name" {
   repository      = var.github_repository
   secret_name     = "AZURE_FUNC_NAME"
-  plaintext_value = azurerm_linux_function_app.func.name
+  value           = azurerm_linux_function_app.func.name
 }
 
 resource "github_actions_secret" "secret_acr_name" {
   repository      = var.github_repository
   secret_name     = "AZURE_ACR_NAME"
-  plaintext_value = azurerm_container_registry.acr.name
+  value           = azurerm_container_registry.acr.name
 }
 
 output "web_app_url" {
