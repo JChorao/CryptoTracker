@@ -131,8 +131,51 @@ resource "azurerm_linux_function_app" "func" {
 }
 
 # =====================================================================
-# AUTOMATIZAÇÃO GITHUB SECRETS
+# AUTOMATIZAÇÃO SERVICE PRINCIPAL E GITHUB SECRETS
 # =====================================================================
+
+data "azurerm_client_config" "current" {}
+
+# Aplicação no Entra ID
+resource "azuread_application" "github_deploy" {
+  display_name = "CryptoDeploy-${random_string.suffix.result}"
+  owners       = [data.azurerm_client_config.current.object_id]
+}
+
+# Service Principal
+resource "azuread_service_principal" "github_deploy" {
+  client_id                    = azuread_application.github_deploy.client_id
+  app_role_assignment_required = false
+  owners                       = [data.azurerm_client_config.current.object_id]
+}
+
+# Segredo do Service Principal
+resource "azuread_service_principal_password" "github_deploy" {
+  service_principal_id = azuread_service_principal.github_deploy.object_id
+}
+
+# Atribuir a Role de Contributor ao Resource Group
+resource "azurerm_role_assignment" "github_deploy" {
+  scope                = azurerm_resource_group.rg.id
+  role_definition_name = "Contributor"
+  principal_id         = azuread_service_principal.github_deploy.object_id
+}
+
+# Configuração dos Secrets no GitHub
+resource "github_actions_secret" "secret_azure_credentials" {
+  repository      = var.github_repository
+  secret_name     = "AZURE_CREDENTIALS"
+  
+  # Constrói o JSON estritamente no formato esperado pela action
+  value = jsonencode({
+    clientId       = azuread_application.github_deploy.client_id
+    clientSecret   = azuread_service_principal_password.github_deploy.value
+    subscriptionId = data.azurerm_client_config.current.subscription_id
+    tenantId       = data.azurerm_client_config.current.tenant_id
+  })
+
+  depends_on = [azurerm_role_assignment.github_deploy]
+}
 
 resource "github_actions_secret" "secret_app_name" {
   repository      = var.github_repository
