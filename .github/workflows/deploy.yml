@@ -1,32 +1,50 @@
-name: Deploy Web App
+name: Deploy Web App e Docker Reports
 
 on:
   push:
     branches:
-      - main
+      - Production
 
 jobs:
-  build-and-deploy:
+  deploy-app:
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout código
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup Node.js 24
+      - uses: actions/checkout@v4
+      
+      - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-
-      - name: 📦 Instalar dependências
+          node-version: '20'
+          
+      - name: 📦 Instalar dependências da App
         run: npm install
+        
+      - name: 🔐 Login na Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: 🚀 Deploy App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          package: .
 
+  build-reports-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: 🔐 Login na Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 🚀 Deploy para Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ secrets.AZURE_APP_NAME }}
-          package: .
+      - name: 🐳 Docker Login no ACR
+        run: |
+          echo "A iniciar sessão no ACR: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io"
+          az acr login --name ${{ secrets.AZURE_ACR_NAME }}
+
+      - name: 🐳 Build e Push de Relatórios
+        run: |
+          docker build -t ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/crypto-reports:latest .
+          docker push ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/crypto-reports:latest
